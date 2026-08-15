@@ -67,7 +67,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - [ ] Plugin ships only `rules/teamshared.mdc` (no `skills/`, `agents/`, `commands/`, `hooks/`)
 - [ ] `README.md` covers install, MCP config, and what the plugin does
 - [ ] `LICENSE` and `CHANGELOG.md` present
-- [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`
+- [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`; both `plugin.json` and `marketplace.json` reference `assets/logo.png` (relative path, not a remote URL)
 - [ ] Test locally: symlink to `~/.cursor/plugins/local/teamshared`, reload, verify MCP + rule
 
 ### Validate locally

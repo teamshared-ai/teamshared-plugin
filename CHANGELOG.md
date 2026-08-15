@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1 — 2026-08-15
+
+- **Plugin logo:** `plugin.json` now uses the committed relative path
+  `assets/logo.png` (512×512), matching `marketplace.json` and first-party
+  Cursor plugins. The previous absolute URL (`https://teamshared.com/assets/logo.png`)
+  500s, so Cursor had nothing to paint on tool turns.
+
 ## 0.9.0 — 2026-08-13
 
 - **License / author:** Agentic Labs Ltd (copyright and plugin/marketplace author).
@@ -24,9 +31,6 @@
   (this repository; moved from `xhad/teamshared-cursor`). Add marketplace
   `https://github.com/teamshared-ai/teamshared-plugin`, then `/add-plugin teamshared`.
   The MCP server remains [`xhad/teamshared`](https://github.com/xhad/teamshared).
-- **Plugin logo:** ship the 512×512 brand PNG (`assets/logo.png`, same mark as
-  the site) and point `plugin.json` plus the marketplace catalog at it.
-  Cursor's plugin UI does not reliably render the SVG.
 - **Folder marketplace:** `.cursor-plugin/marketplace.json` with `"source": "./"`
   so Cursor **Add plugins from folder** accepts this repo root.
 - **Rule 1.14.0:** every-turn `memory_session_ensure(..., user=request)` (no

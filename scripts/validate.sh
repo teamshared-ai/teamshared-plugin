@@ -77,10 +77,10 @@ if plugin.get("rules") != "./rules/teamshared.mdc":
     sys.exit(1)
 print("ok  rules  ./rules/teamshared.mdc")
 
-if plugin.get("logo") != "https://teamshared.com/assets/logo.png":
-    print(f"FAIL  plugin.json logo must be 'https://teamshared.com/assets/logo.png', got {plugin.get('logo')!r}")
+if plugin.get("logo") != "assets/logo.png":
+    print(f"FAIL  plugin.json logo must be 'assets/logo.png', got {plugin.get('logo')!r}")
     sys.exit(1)
-print("ok  logo  https://teamshared.com/assets/logo.png")
+print("ok  logo  assets/logo.png")
 
 for key in ("skills", "agents", "commands", "hooks"):
     if key in plugin:
