@@ -4,12 +4,12 @@
   "version": "0.9.0",
   "description": "Shared team memory for Cursor: remote MCP with email/OTP Connect, and the recall-first memory rule.",
   "author": {
-    "name": "Agentic Labs Ltd"
+    "name": "Teamshared AI"
   },
-  "homepage": "https://github.com/teamshared-ai/teamshared-plugin",
+  "homepage": "https://teamshared.com",
   "repository": "https://github.com/teamshared-ai/teamshared-plugin",
   "license": "MIT",
-  "logo": "assets/logo.png",
+  "logo": "https://teamshared.com/assets/logo.png",
   "keywords": [
     "teamshared",
     "mcp",

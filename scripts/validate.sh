@@ -60,7 +60,7 @@ if not kebab.match(name):
     sys.exit(1)
 print(f"ok  name  {name}")
 
-if plugin.get("homepage") != "https://github.com/teamshared-ai/teamshared-plugin":
+if plugin.get("homepage") != "https://teamshared.com":
     print(f"FAIL  plugin.json homepage, got {plugin.get('homepage')!r}")
     sys.exit(1)
 if plugin.get("repository") != "https://github.com/teamshared-ai/teamshared-plugin":
@@ -77,10 +77,10 @@ if plugin.get("rules") != "./rules/teamshared.mdc":
     sys.exit(1)
 print("ok  rules  ./rules/teamshared.mdc")
 
-if plugin.get("logo") != "assets/logo.png":
-    print(f"FAIL  plugin.json logo must be 'assets/logo.png', got {plugin.get('logo')!r}")
+if plugin.get("logo") != "https://teamshared.com/assets/logo.png":
+    print(f"FAIL  plugin.json logo must be 'https://teamshared.com/assets/logo.png', got {plugin.get('logo')!r}")
     sys.exit(1)
-print("ok  logo  assets/logo.png")
+print("ok  logo  https://teamshared.com/assets/logo.png")
 
 for key in ("skills", "agents", "commands", "hooks"):
     if key in plugin:
