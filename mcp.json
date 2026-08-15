@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "teamshared": {
+      "type": "http",
+      "url": "https://teamshared.com/mcp"
+    }
+  }
+}

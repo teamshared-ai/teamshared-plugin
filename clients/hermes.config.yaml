@@ -1,0 +1,17 @@
+# Example Hermes MCP block (manual setup)
+#
+# For curl install, use the templated snippet the server serves at
+# /install/assets/hermes/mcp.yaml (source: ../install/hermes/mcp.yaml).
+# Paste protocol.md into SOUL — same as /install/assets/hermes/protocol.md
+# (source: protocol.md in this directory).
+
+mcp_servers:
+  teamshared:
+    url: https://teamshared.com/mcp
+    headers:
+      Authorization: "Bearer <agent-token>"
+    timeout: 30
+    connect_timeout: 10
+    tools:
+      resources: true
+      prompts: false

@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+.vscode/
+.cursor/mcp.json
+.cursor/plugins/
+.cursor/hooks/state/

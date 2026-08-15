@@ -1,0 +1,23 @@
+{
+  "_comment": "Extended example for manual Claude Desktop setup. The curl installer uses install/claude/mcp.json (served at /install/assets/claude/mcp.json).",
+  "mcpServers": {
+    "teamshared-remote": {
+      "_comment": "Preferred when teamshared is deployed on Tailscale/Railway",
+      "url": "https://teamshared.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <agent-token>"
+      }
+    },
+    "teamshared-local": {
+      "_comment": "Local stdio — requires teamshared on PATH and backing stores running",
+      "command": "teamshared",
+      "args": ["serve", "--transport", "stdio"],
+      "env": {
+        "TEAMSHARED_AUTH_DISABLED": "true",
+        "TEAMSHARED_REDIS_URL": "redis://localhost:6379/0",
+        "TEAMSHARED_PG_HOST": "localhost",
+        "TEAMSHARED_PG_PORT": "5433"
+      }
+    }
+  }
+}

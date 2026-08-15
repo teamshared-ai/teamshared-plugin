@@ -1,0 +1,833 @@
+---
+description: Use the teamshared MCP server as persistent cross-session memory.
+alwaysApply: true
+version: 1.14.0
+---
+
+# teamshared Memory Protocol
+
+<!-- teamshared-rule-version: 1.14.0 -->
+
+The `teamshared` MCP server is your durable brain across sessions and repos.
+Authenticated identity sets write attribution; do not pass `agent` unless you
+intentionally override it or narrow a read filter. On Cursor, connect with
+OAuth (Settings → Tools & MCP → Connect, email + OTP) — no API key in
+`mcp.json`. Other harnesses may still use a `tsk_*` bearer.
+
+## Staying current
+
+This rule is versioned (`version` in the frontmatter above, currently `1.14.0`).
+The server ships the canonical rule and its version. Keep the installed copy
+fresh:
+
+1. On the **first turn of a chat** (or when the user asks about teamshared
+   versions), call the `version` tool with this rule's frontmatter `version`
+   (`1.14.0`) as `installed_rule_version`. Do not call `version` every turn.
+2. If the response has `update_available: true`, write the returned
+   `rule_markdown` verbatim to your rule file (Cursor desktop:
+   `~/.cursor/rules/teamshared.mdc`; repo:
+   `.cursor/rules/teamshared.mdc`), then tell the user the memory rule was
+   updated to the new version.
+3. If `update_available: false`, do nothing — you're current.
+
+Never invent a version; read it from the frontmatter or the `version` tool.
+
+## Every turn checklist
+
+Run these in order on **every** turn (see **Session logging** for setup details):
+
+1. **`memory_session_ensure(repo=..., topic=..., fresh=<first turn>, user=<request>)`**
+   — one call recovers the active session or rotates to a new one, and appends
+   the substantive user request. Pass `fresh=true` only on the first turn of a
+   new chat; omit it mid-chat. When the response includes a non-empty ``soul``
+   string, treat it as always-on identity context for this person (private,
+   org-scoped) — put it in your system/working context for the rest of the chat.
+   Keep `memory_session_append` for extra turns (non-teamshared tool outcomes)
+   or if ensure ran without `user=`.
+2. **`memory_recall(...)`** with durable scope (see **Retrieval playbook**) for
+   non-trivial tasks (architecture, debugging, past work, "how do we…"). Add
+   `memory_think` only when you need synthesis and recall already surfaced hits.
+   Skip both for pure one-liner acknowledgments. Unsure which tool? Call
+   `memory_tools_catalog(need="<intent>")`.
+3. **Do the work** — tools, edits, answers.
+4. **`context_commit(summary=..., facts=[...], repo=..., close=<done?>)`** — one
+   turn-end call: appends the faithful assistant summary, writes any durable
+   facts, and (when the task is done or the user says goodbye) closes the
+   session with distillation. This should be your **last MCP call** of the turn.
+5. **`work_*` / `project_*` / `memory_skill_set` / `memory_playbook_set`** — as
+   needed for tasks, boards, atomic how-tos, or composed flows (facts/preferences
+   go in `context_commit.facts` or `memory_remember`).
+
+After significant tool use from **non-teamshared** tools (Shell, Grep, Read),
+optionally append a one-line `tool` turn summarizing what ran and the outcome.
+**Do not** append `[tool]` turns for teamshared MCP calls — autosession already
+captures them; tool-turn appends pollute the next recall when you opt into
+`scope=["working"]`. When a **non-teamshared** tool returns bulky output, call
+`context_normalize` and use the trimmed `output` in your reasoning. teamshared
+MCP responses are already normalized by server middleware — do not re-normalize
+them. Server middleware also logs MCP tool calls to a separate autosession;
+your explicit session holds the NL story.
+
+## Core workflows
+
+### Recall first
+
+Before any non-trivial request, call `memory_recall` with durable scope (see
+**Retrieval playbook**). Ground answers in hits; cite them. Use `memory_think`
+for synthesis only after durable recall surfaced hits, or for open strategic
+questions.
+
+- Default scope (omit `scope` or pass durable pillars only): semantic, episodic,
+  procedural, skill, strategic, work — **not** working.
+- `scope=["working"]` only when you need this chat's open session turns.
+- `scope=["procedural"]` / `scope=["skill"]` for "how do we usually…" (playbooks
+  vs atomic skills).
+- `scope=["strategic"]` for vision, mission, OKRs, and initiatives.
+- `scope=["work"]` for open tasks, blockers, and assignee-owned work.
+- `scope=["episodic"]` for "what did we do on X?".
+- `scope=["semantic"]` for stable facts and preferences.
+- `memory_recall(..., explain=true)` for attribution on each hit.
+- For code/repo-specific work, pass `repo=<workspace-slug>` and/or
+  `github=<owner>/<repo>` to softly boost scoped memories (nothing is hidden).
+
+If recall is empty, say so before answering from priors.
+
+### Retrieval playbook
+
+**Step 1 — durable recall** (always pass `repo=` and `github=`):
+
+```text
+memory_recall(
+  query=<short keyword anchor>,
+  scope=["semantic","episodic","procedural","skill","strategic","work"],
+  repo=<workspace-slug>,
+  github=<owner/repo>,
+  explain=true
+)
+```
+
+**Step 2 — anchor, then broaden** when the topic has a named entity:
+
+1. Short keyword: `query="mex"` or `query="Hivemind"` (1–3 tokens).
+2. If thin, broaden: `query="mex teamshared competitor"`.
+3. Do **not** start with only a long conversational question as the query.
+
+**Step 3 — pick the tool:**
+
+| Need | Tool |
+|---|---|
+| Raw hits to cite | `memory_recall` |
+| Prose answer + gaps | `memory_think` after step 1–2 found durable hits |
+| One budgeted pack | `memory_assemble_context(task=...)` |
+| Live Gmail / Slack / Discord | `integration_list` → `integration_search` / `integration_read` (not recall) |
+
+**Quality check:** with `explain=true`, prefer hits where
+`metadata.matched_keyword` is true. If top hits are `[tool]` working turns,
+retry excluding working: use durable scope only. Connector-synced content has
+`source: connector` — that is ingested mail/chat, not live provider search.
+
+**Avoid:** `memory_think` as the first and only call on entity/competitor/code
+questions — it inherits default durable recall but still depends on query
+wording; keyword-anchored `memory_recall` first is more reliable. Do **not**
+treat empty `memory_recall` for Slack/email as "no messages" until you have
+tried `integration_list` / `integration_search` when the user wants the live
+inbox.
+
+### Integrations (Gmail / Slack / Discord)
+
+Connected accounts are **human-setup** in the console (`/app/connections`);
+agents use MCP once a connection exists. Live search/read/send hits the
+provider API — that is **not** the same as `memory_recall`.
+
+**Connections are per-person, and so is what they import.** A connection made
+through OAuth belongs to the human who made it: only they can read, send, or
+sync through it, and mail or DMs pulled in that way are stored **private to
+that person**, not in the org shared brain. Your bearer token therefore reaches
+your own connections plus any legacy shared org-scoped connector — never a
+teammate's. Only content from a shared org-scoped connector lands in the shared
+brain as `source: connector` (background `integrations-sync` worker).
+
+| Want | Tool |
+|---|---|
+| See what’s connected | `integration_list` |
+| Live search inbox/channel | `integration_search(kind=..., query=...)` |
+| Fetch one message (+ ingest for recall) | `integration_read(kind=..., message_id=...)` |
+| Send email / Slack / Discord | `integration_send` — **only when the user asks to send** |
+
+Kinds: `gmail`, `slack`, `discord`. If `integration_list` is empty, tell the
+user to connect under `/app/connections` — do not invent messages, and do not
+assume a teammate's connection is available to borrow. Slack `message_id` is
+`channel:ts`; Discord is `channel_id:message_id`.
+
+Each of `integration_search` / `integration_read` / `integration_send` takes an
+optional `connector_id` (from `integration_list`) when the caller has more than
+one connection of a kind; omit it and your own is chosen. Asking to act through
+someone else's connection fails with a permission error — that is intended, so
+relay it to the user rather than retrying.
+
+### Shared files (versioned HTML/Markdown documents)
+
+Shared files are versioned documents authored from agent chat (`file_create` /
+`file_update`) or the console (`/app/files`). Each update creates a new
+immutable version row; the latest version is the live content. Files default
+to **private**. `file_publish` stamps a `share_token` UUID **and generates a
+human-readable `slug`** from the title (collision-safe: appends `-2`, `-3`, …).
+The public URL is `/s/{slug}` (e.g. `/s/sapien-yield-vault-modeller`); the UUID
+`/s/{share_token}` URL still works as a fallback. `file_archive` retains full
+history but excludes the file from active lists and the public route. Rendered
+HTML is mirrored eagerly to an S3-compatible bucket when
+`TEAMSHARED_OBJECT_STORAGE_*` is configured (Postgres stays canonical).
+
+When the user says **"share this file"** (or "share this") for a local file on
+their machine, use `file_upload_request` (with `publish=true`) — it mints a
+one-time grant and returns a self-deleting uploader script. For inline content
+(small enough to pass through chat), use `file_create` then `file_publish`.
+
+**Pushing a new version of an already-shared file:** if the new content is
+small, use `file_update(file_id, content)`. If the file is large (a local HTML
+file that won't fit inline in chat JSON — the inline path caps out around
+~10–16 KB), use `file_upload_request(..., file_id=<existing file_id>)` in
+**update mode**: it mints a one-time grant scoped to that file, and the uploader
+script appends the uploaded body as a new version (title/slug/share_token are
+preserved; the bucket mirror is re-published to the new version when the file
+is already published). This is the supported way to push v2+ of a big file.
+
+**Finding an already-shared file's URL:** call
+`file_list(query="<title fragment>")` — it filters by case-insensitive title
+substring and each returned file includes a ready-to-use `public_url` (the
+`/s/{slug}` link) when published. Do not list the whole org and grep; pass
+`query`. `file_get(file_id)` also returns `public_url`.
+
+| Want | Tool |
+|---|---|
+| Create a shared file | `file_create(title, content, content_format='markdown')` |
+| Upload a large local file into a shared file | `file_upload_request(title, content_format='auto', filename?, publish?)` → one-time script |
+| Append a new version (inline, small) | `file_update(file_id, content, content_format?)` |
+| Append a new version (large local file) | `file_upload_request(title, content_format='auto', filename?, publish?, file_id=<existing>)` → one-time script (update mode) |
+| Fetch a shared file (latest version) | `file_get(file_id)` |
+| List / search active shared files | `file_list(limit=100, query?)` → each file has `public_url`, `slug`, `share_token` |
+| Publish / get the public URL | `file_publish(file_id)` → `slug`, `share_token`, `public_url` (`/s/{slug}`) |
+| Revoke public access | `file_unpublish(file_id)` |
+| Archive (retain history) | `file_archive(file_id)` |
+| Delete one version | `file_version_delete(file_id, version)` — refuses the only remaining version; if the deleted version was current, bumps `current_version` back to the new max and re-mirrors the bucket (when published) |
+
+`content_format` is `'markdown'` (rendered through the allowlist sanitizer) or
+`'html'`. **Interactive HTML tools** (charts, sliders, simulations) render
+fully on the `/s/{slug}` page inside a **sandboxed `srcdoc` iframe**
+(`sandbox="allow-scripts"` — scripts run in an opaque origin with no access to
+teamshared cookies/parent, so agent-authored HTML can't XSS the host page).
+No bucket is needed for the iframe to work. When a bucket mirror *is*
+configured (`TEAMSHARED_OBJECT_STORAGE_*` incl. `object_storage_public_base_url`),
+`file_publish` also mirrors the raw HTML and returns `public_url_direct` — a
+standalone CDN link useful for fullscreen / sharing a direct link; the `/s/{slug}`
+page shows it as an "Open interactive version" link below the iframe.
+
+**Uploading large local files:** `file_create` takes inline content, which
+breaks for big HTML/Markdown blobs passed through chat JSON. For a file on the
+user's machine, call `file_upload_request` — it mints a one-time grant and
+returns `upload_url`, `upload_token`, `expires_in_seconds` (~600), and a
+self-deleting Python `script` (stdlib only). Save the script to disk and run
+`python3 upload.py /path/to/file`; it reads the file, POSTs the raw bytes to
+`/v1/files/upload` with the one-time token (single-use, ~10 min TTL), prints the
+resulting `file_id` (and `public_url`/`public_url_direct` if `publish=true`),
+and deletes itself on success. The token is consumed on first use.
+
+### Assemble context
+
+`memory_assemble_context(task=..., token_budget=...)` returns one token-budgeted
+pack mixing recall + open work + relevant skills/playbooks for a task. Reach for
+it when you want a single grounded starting context instead of hand-picking
+scopes.
+
+### Context compression
+
+Long multi-turn chats replay fat tool output every turn. teamshared reduces that
+token burn through MCP — no client hooks required.
+
+| Mechanism | When |
+|---|---|
+| **MCP middleware** | Automatic on teamshared tool responses (`memory_recall`, etc.) |
+| **`context_normalize`** | After Shell/Grep/Read (or similar) returns large output |
+| **`context_prepare`** | Optional: session append + compress history + enrich org memory |
+| **`context_compress`** | Shrink an arbitrary message list before an LLM call |
+| **`context_retrieve`** | Expand a `ref=ccr_…` from a compressed block |
+
+After **non-teamshared** tools return bulky JSON or logs (roughly ≥800 chars),
+call `context_normalize(tool_name=..., output=...)` and reason over the returned
+`output` instead of the raw payload.
+
+`## TeamShared context` blocks (assembled memory packs) are never compressed.
+When content is compressed, originals are stored in CCR; use
+`context_retrieve(ref=...)` to drill down.
+
+Use `context_prepare` when you want session logging, history compression, and
+org-memory enrichment in one call. The **Session logging** workflow below still
+applies when you use granular `memory_session_*` tools instead.
+
+### Code work: resolve `repo` and `github`
+
+**Always** resolve `repo=` for session logging, state, and code-scoped memory —
+every chat, not only git tasks:
+
+1. **Workspace slug** — run `git rev-parse --show-toplevel` when in a git
+   checkout; otherwise use the Cursor workspace root. strip leading `/`,
+   replace `/` with `-`. Pass as `repo=` on `memory_recall`, `memory_remember`,
+   `memory_session_*`, and `memory_state_*`.
+2. **GitHub repo** — when `command -v gh` succeeds, run
+   `gh repo view --json nameWithOwner` from the repo root and pass
+   `github=<nameWithOwner>` (e.g. `sapien/teamshared`). Stable across machines;
+   the server stores `github:<owner>/<repo>`. Optional `subject=<nameWithOwner>`.
+3. **Never** use `owner/repo` as `repo=` (slashes are invalid for workspace slugs).
+4. If an MCP call fails with invalid JSON mentioning `repo`, omit `repo` and use
+   `github=` (and/or explicit `tags`) instead; retry.
+
+### Remember durable things
+
+Call `memory_remember(content, kind=...)` for things still true next week:
+
+| Signal | `kind` |
+|---|---|
+| "I prefer / always / never …" | `preference` |
+| Stable repo fact | `fact` |
+| One-off event worth logging | `event` |
+| Misc working note | `note` |
+
+Optional: `subject`, `tags`. `[[Entity]]` wikilinks autolink on write. For
+code/repo-specific memories, pass `repo=<workspace-slug>` and/or
+`github=<owner>/<repo>`; omit both for cross-cutting preferences. After
+finishing research docs or competitor analysis, store a **dense summary**
+(`subject=<entity>`, tags like `competitor` / `product`) — one keyword-rich
+paragraph beats hoping recall finds a long markdown file. Do **not** use
+`memory_remember` for skills or playbooks — use `memory_skill_set` /
+`memory_playbook_set`.
+
+### Soul (private person memory)
+
+Each human has a **soul** in each org: a tiny compressed identity block (name,
+role, style, likes/dislikes, choice patterns, dos/don'ts). It is **private to
+that person** and returned on every ``memory_session_ensure`` as ``soul`` when
+the API key is linked to their account (keys minted from the console while
+signed in).
+
+| Want | Tool |
+|---|---|
+| Read / refresh soul | Returned on `memory_session_ensure`; or `memory_soul_get` |
+| Rewrite soul | `memory_soul_set(body_md=...)` — keep short; server caps length |
+| Feed soul from prefs | `memory_remember(..., kind="preference")` absorbs into soul |
+
+Keep soul content dense and short (~one screen). Prefer structured markdown
+(`# Soul`, bullets under likes / dislikes / style / dos / donts / Notes).
+
+### Skills vs playbooks
+
+| Want | Tool |
+|---|---|
+| Atomic how-to (one task, one page) | `memory_skill_set` |
+| Composed flow that wires skills together | `memory_playbook_set` + `tool_recipe.skills` |
+
+`memory_skill_set(name, body_md, tags=..., version=...)` stores a new versioned
+skill. `memory_skill_get` / `memory_skills_list` read them. `memory_skill_resolve`
+inlines the skill bodies a playbook references.
+
+`memory_playbook_set(name, steps_md, tool_recipe={"skills": [...]})` stores a
+composed playbook (alias: `memory_procedure_set`). `memory_playbook_get`
+(`memory_procedure_get`) and `memory_playbooks_list` (`memory_procedures_list`)
+read them. Rituals are skills; composed flows are playbooks. Never store an
+atomic instruction as a playbook.
+
+### Work queue (tasks for humans)
+
+Use `work_*` for durable, assignable tasks — not `memory_remember`.
+
+1. **Start of task:** `work_list(mine=true)` or `work_list(work_status="todo")`
+   to pick up existing work; otherwise `work_create(title=..., work_status="todo")`.
+2. **Assign:** `assignee_email="teammate@..."` on create/update.
+3. **Progress:** `work_update(work_id=..., work_status="in_progress")` — no
+   re-approval. Use `work_status="blocked"` with `blocked_reason=` when stuck.
+4. **Progress notes:** `work_comment_add(work_id=..., body=...)` for handoffs and
+   blockers — not `memory_remember`.
+5. **Finish:** `work_close(work_id=..., work_status="done")` when complete.
+   Closing writes an episodic event for the timeline.
+6. **Projects:** `project_list` / `project_create` / `project_get` group tasks
+   on a board; `work_add_to_project` / `work_move` place items. Status:
+   `project_status_post`.
+
+Work items are created active immediately — task
+creation does not go through the approval queue. Optional `initiative_id=`
+links a task to a strategic initiative.
+
+### Session logging (every chat)
+
+Log conversation turns to teamshared on **every** chat via MCP — the agent owns
+capture; there is no client-side transcript hook. Session logging via
+`memory_session_*` is agent-initiated and does **not** use the `/sessions/turns`
+consent path (unlike automatic transcript ingest).
+
+Always resolve `repo=` first (see above). The server keeps the
+`conversation/active-session` state pointer for you — one tool call per
+lifecycle event:
+
+**First turn of a thread** (no prior assistant turns in your context):
+
+- `memory_session_ensure(repo=..., topic=<first user message, max ~120 chars>,
+  github=..., fresh=true, user=<request>)` — closes any stale session
+  (distilling it), opens a new one, appends the user turn, and updates state
+  in one call.
+
+**Mid-thread** (any later turn): `memory_session_ensure(repo=..., topic=...,
+user=<request>)` without `fresh` — returns the existing `session_id`
+(`resumed: true`); it never opens a duplicate.
+
+**Mid-thread pivot** (user clearly starts a new topic — do not wait for a new
+Cursor chat): `memory_session_ensure(repo=..., topic=<new topic>, fresh=true)`.
+
+**When done** (task complete, user says goodbye):
+`context_commit(summary=..., repo=..., close=true)` — appends the final
+assistant summary, closes with distillation, and clears state.
+
+**Append failure recovery** is automatic: `memory_session_append` and
+`context_commit` reopen a fresh session when the old one expired and return the
+new `session_id` with `reopened: true` — adopt it.
+
+The granular `memory_state_get` / `memory_session_open` /
+`memory_session_close` / `memory_state_set` tools still work if you need
+manual control, but `memory_session_ensure` + `context_commit` are preferred.
+
+Append the substantive user request and a faithful summary of your reply — not
+UI boilerplate. Truncate long tool output. Never append secrets, tokens, or
+credentials.
+
+### Entity hub
+
+`memory_entity_view(slug=...)` returns one rollup for an entity: its wiki page,
+related memories, graph neighbors, and open work. Use it when the user asks about
+a specific subject (person, project, repo, concept) rather than running four
+separate searches.
+
+### Read vs write scoping
+
+- **Shared brain (default):** `memory_recall` and `memory_episodes_list` return
+  every agent's durable memories unless you pass `agent=` to narrow.
+- **Working memory (opt-in):** pass `scope=["working"]` to include this chat's
+  session turns in recall; default scope excludes working so tool-turn noise
+  does not crowd out durable facts.
+- **Writes:** `memory_remember`, `memory_session_*`, `memory_skill_set`,
+  `memory_playbook_set`, and `memory_graph_relate` attribute to the authenticated
+  identity unless `agent=` overrides. Guarded writes land **active** immediately;
+  hard secrets are rejected.
+
+## Human console (`/app`)
+
+teamshared has a web console for humans at `<server>/app`
+(e.g. https://teamshared.com/app). When a teammate asks how to *see* the
+memory, sign in, onboard, or manage their team, point them there — these are
+human/browser actions, not MCP tools:
+
+- **Sign in:** any email + a one-time passcode (no password). First sign-in
+  creates that email's own private org; they can create more orgs and switch
+  between them from the header. Cursor MCP uses the same email/OTP via
+  **Settings → Tools & MCP → Connect** (no API key in `mcp.json`).
+- **Memory wiki** (`/app/wiki`): semantic facts, the episodic timeline, and
+  playbooks rendered as a browsable, human-readable knowledge base.
+- **Work** (`/app/work`): org-wide task queue; assign to people or agents.
+- **Manage:** agents, **API keys** (`tsk_…` for CI / non-OAuth harnesses),
+  people (add a teammate by email), and **Connections** (`/app/connections`) for
+  Gmail / Slack / Discord OAuth. Automatic capture is controlled by the deployment's
+  capture setting.
+
+A fresh self-serve org starts empty and isolated; joining the shared team brain
+is an admin action (People → add member). Point humans at the console (`/app`)
+to browse memory — there is no public status page.
+
+## Tool reference
+
+Prefer the **Quick chooser** during tasks. For param detail or an unfamiliar
+intent, call `memory_tools_catalog(need="<intent>")` — it returns the every-turn
+`protocol`, a need→tool `chooser`, `never` constraints, and per-tool `when` /
+`avoid` / `example`. Browse with `memory_tools_catalog()` (all groups). Do not
+call `scope="memory", tier="core"` as the only discovery path — that hides
+files and projects.
+
+### `health`
+
+Probe server liveness and dependencies. Returns
+`{"status": "ok"|"degraded", "components": {...}}` covering redis, postgres, and
+the memory/LLM backends (semantic, distiller, curator, graph, provider).
+Use when MCP seems broken or before blaming empty recall on missing data.
+Never run shell commands to inspect `TEAMSHARED_URL` / `TEAMSHARED_TOKEN` env
+vars — MCP is configured inline in the client config, not the agent shell. If
+MCP looks down, call `health`, not `echo`.
+
+### `version`
+
+Report the server version and the canonical rule version, and check whether the
+installed rule is current.
+
+| Param | Use |
+|---|---|
+| `installed_rule_version` | The `version` from this rule's frontmatter (optional; omit if unknown) |
+
+Returns `{server_version, rule_version, installed_rule_version, rule_path,
+update_available}` and, when `update_available` is true, the full `rule_markdown`
+to write to the local rule file. See **Staying current** above.
+
+### `memory_recall`
+
+Hybrid search across semantic, episodic, procedural, skill, strategic, and work
+pillars. Default scope excludes working (opt in with `scope=["working"]`).
+
+| Param | Use |
+|---|---|
+| `query` | Short keyword anchor for entities; NL for broad topics (required) |
+| `scope` | Durable pillars by default; add `working` only for session turns |
+| `k` | Max records (1–50, default 8) |
+| `time_range` | Optional bounds for episodic/working hits |
+| `agent` | Optional filter to one agent's durable writes |
+| `repo` | Optional workspace slug; soft-boosts `repo:<slug>` tags (nothing hidden) |
+| `github` | Optional `owner/repo`; soft-boosts `github:<owner>/<repo>` tags |
+| `explain` | `true` to include attribution per hit; prefer `matched_keyword: true` |
+
+Returns `records` with pillar, agent, timestamps, and content for citation.
+For code work, pass `repo=<workspace-slug>` and/or `github=<owner>/<repo>`.
+
+### `memory_think`
+
+Synthesized answer with citations and gap analysis. Runs durable recall (no
+working by default), then composes prose + gaps. Use **after** keyword-anchored
+`memory_recall` for entity/competitor/code questions; use directly for open
+strategic or process questions.
+
+### `memory_assemble_context`
+
+One token-budgeted context pack for a task (recall + open work + relevant
+skills/playbooks).
+
+| Param | Use |
+|---|---|
+| `task` | The task description (required) |
+| `token_budget` | Soft cap on returned context size |
+
+### `context_compress`
+
+Shrink a message list before sending it to an LLM. User messages are preserved;
+long tool/assistant/system blocks compress with SmartCrusher-lite. Returns
+`messages`, `compressed`, and `stats`. Always runs when thresholds apply.
+
+### `context_retrieve`
+
+Fetch the original content for a CCR ref (`ref=ccr_…`) from a compressed block.
+
+| Param | Use |
+|---|---|
+| `ref` | CCR reference string from compressed output (required) |
+
+### `context_prepare`
+
+Pre-LLM pipeline: session append → compress incoming history → enrich org memory.
+
+| Param | Use |
+|---|---|
+| `messages` | OpenAI-style chat messages (or use `prompt`) |
+| `prompt` | Latest user prompt when full history is unavailable |
+| `session_id` | Working-memory session to append the user turn to |
+| `repo` / `github` | Scoped recall enrichment |
+| `append_session` | Append latest user message (default `true`) |
+| `enrich` | Assemble org memory into `additional_context` (default `true`) |
+| `token_budget` | Soft cap for assembled context |
+
+Returns compressed `messages`, optional `additional_context`, `session_id`, and
+`stats`.
+
+### `context_commit`
+
+Turn-end batch: assistant summary + durable writes + optional session close in
+one call.
+
+| Param | Use |
+|---|---|
+| `summary` | Faithful summary of your reply — the assistant turn (required) |
+| `session_id` | Session to commit to (omit to resolve from state via `repo`) |
+| `facts` | Optional durable writes: `[{"content", "kind", "subject", "tags"}]` |
+| `repo` / `github` | Scope tags for facts and the state pointer |
+| `close` | `true` when done: closes with distillation and clears state |
+
+Returns `{session_id, turn_count, reopened, memories, closed}`. The append
+self-heals expired sessions — the returned `session_id` is authoritative.
+
+### `context_normalize`
+
+Strip, clean, and compress a **non-teamshared** tool output (Shell, Grep, Read).
+
+| Param | Use |
+|---|---|
+| `tool_name` | Harness tool name (required) |
+| `output` | Raw tool output string, usually JSON (required) |
+
+Returns trimmed `output`, `compressed`, `cleaned`, and `stats`. Skip for
+teamshared MCP tools — middleware handles those.
+
+### `memory_remember`
+
+Write semantic or episodic memory.
+
+| Param | Use |
+|---|---|
+| `content` | Text to store (required) |
+| `kind` | `fact` \| `preference` \| `event` \| `note` (default `note`) |
+| `subject` | Optional entity the memory is about |
+| `tags` | Optional string list |
+| `agent` | Optional attribution override |
+| `repo` | Optional workspace slug → `repo:<slug>` tag |
+| `github` | Optional `owner/repo` → `github:<owner>/<repo>` tag (portable) |
+
+Routing: `event` → episodic; others → semantic. Rejects `kind=procedure`.
+For code work, pass `repo=` and/or `github=`; omit both for cross-cutting facts.
+
+### `memory_session_ensure` / `memory_session_open` / `memory_session_append` / `memory_session_close` / `memory_session_get`
+
+Working-memory buffer in Redis — one session per chat (see **Session logging**).
+
+| Tool | Key params |
+|---|---|
+| `memory_session_ensure` | `repo` (required), `topic`, `github`, `fresh`, `user` → `{session_id, agent, resumed, soul}`; `user=` appends the request in the same call |
+| `memory_session_open` | `topic`, optional `ttl`, `agent`, `repo`, `github` → `{session_id, agent}` (prefer `memory_session_ensure`) |
+| `memory_session_append` | `session_id`, `role` (`user` \| `assistant` \| `tool` \| `system`), `content` → `{turn_count, session_id}`; self-heals expired sessions (`reopened: true`) |
+| `memory_session_close` | `session_id`, `distill=true` (default) queues distillation to durable memory |
+| `memory_session_get` | `session_id` → current turns/metadata |
+
+### `memory_state_get` / `memory_state_set`
+
+Token+repo scoped JSON blobs for client bookkeeping (not durable team knowledge).
+
+| Param | Use |
+|---|---|
+| `repo` | Workspace slug: absolute path, leading `/` removed, `/` → `-` |
+| `key` | Opaque key, e.g. `conversation/active-session`, `continual-learning/index` |
+| `value` | JSON object (`memory_state_set` only); `{}` clears active session |
+
+Prefer server state over git for incremental indexes and cadence files when MCP
+is available; fall back to `~/.cursor/hooks/state/...` locally.
+
+### `memory_episodes_list`
+
+Browse the episodic timeline (distilled sessions and logged events).
+
+| Param | Use |
+|---|---|
+| `topic` | Substring match |
+| `since` / `until` | Time bounds on `created_at` |
+| `limit` | 1–200 (default 20) |
+| `agent` | Optional filter to one agent's episodes |
+
+Default: all agents' episodes (shared brain).
+
+### Skills: `memory_skill_get` / `memory_skill_set` / `memory_skills_list` / `memory_skill_resolve`
+
+Versioned atomic how-tos in Postgres. Each `memory_skill_set` creates a new
+version.
+
+| Tool | When |
+|---|---|
+| `memory_skill_set` | Store new skill version: `name`, `body_md`, optional `tags`, `version` |
+| `memory_skill_get` | Fetch by `name`, optional `version` (latest if omitted) |
+| `memory_skills_list` | Discover skills; optional `tag`, `limit`, `offset` |
+| `memory_skill_resolve` | Inline the skill bodies a playbook references |
+
+### Playbooks: `memory_playbook_get` / `memory_playbook_set` / `memory_playbooks_list`
+
+Versioned composed flows. Aliases: `memory_procedure_get` / `memory_procedure_set`
+/ `memory_procedures_list`.
+
+| Tool | When |
+|---|---|
+| `memory_playbook_set` | Store new version: `name`, `steps_md`, optional `description`, `tool_recipe`, `tags` |
+| `memory_playbook_get` | Fetch by `name`, optional `version`, optional `expand_skills=true` to inline |
+| `memory_playbooks_list` | Discover playbooks; optional `tag`, `limit`; `include_body=true` for full text |
+
+`tool_recipe.shapes.skills_compose` loops through skill building blocks.
+
+### `memory_entity_view`
+
+Entity hub rollup.
+
+| Param | Use |
+|---|---|
+| `slug` | Entity slug, e.g. `teamshared`, `alice`, `owner/repo` (required) |
+
+Returns wiki page + related memories + graph neighbors + open work in one call.
+
+### `memory_strategic_*`
+
+Org-wide vision, mission, purpose, and OKR cycles. **Never** use
+`memory_remember` for strategic content — use these tools instead.
+
+| Tool | When |
+|---|---|
+| `memory_strategic_statement_get` | Active vision, mission, or purpose |
+| `memory_strategic_statement_set` | Propose a new statement version |
+| `memory_strategic_plan_list` / `memory_strategic_plan_get` | Browse OKR cycles |
+| `memory_strategic_plan_set` | Propose a new cycle |
+| `memory_strategic_objective_set` | Propose an objective |
+| `memory_strategic_key_result_set` | Propose a key result |
+| `memory_strategic_initiative_set` | Propose an initiative |
+
+Strategic writes are active immediately after RBAC and ingestion checks.
+
+### `work_list` / `work_get` / `work_create` / `work_update` / `work_close` / `work_comment_*`
+
+Org-scoped task queue. Assign to **users** (`assignee_email` / `assignee_type=user`).
+
+| Tool | When |
+|---|---|
+| `work_list` | Table backlog; `mine=true`; filter `work_status`; `exclude_closed` (default true); `sort` |
+| `work_get` | One item by `work_id` |
+| `work_create` | New task; writes → active immediately |
+| `work_update` | Status, assignee, priority, `blocked_reason` — immediate |
+| `work_close` | `work_status=done` or `cancelled`; writes episodic timeline event |
+| `work_comment_add` | Progress note on a task |
+| `work_comment_list` | Thread on a task (oldest first) |
+
+Statuses: `backlog`, `todo`, `in_progress`, `blocked`, `done`, `cancelled`.
+Do **not** store tasks via `memory_remember`. Use comments for progress, not facts.
+Projects: `project_list` / `project_create` / `project_get`; `work_add_to_project`
+to place a task on a board.
+
+### `memory_graph_relate` / `memory_graph_related`
+
+Explicit entity relationships, stored as edges in Postgres alongside the other
+pillars. Predicates are validated against the org's registered
+`ontology_link_types` when any are defined.
+
+| Tool | Use |
+|---|---|
+| `memory_graph_relate` | `subject`, `predicate`, `object`, optional `weight`, optional `agent` |
+| `memory_graph_related` | Expand neighbors of `name`, `depth` (1–4), `limit` |
+
+Use for structured facts vector recall would obscure (e.g. `alice` → `works_on` → `teamshared`).
+
+### `memory_forget`
+
+Soft-delete a semantic/episodic memory by `memory_id` (from a prior recall).
+Requires `reason` for audit. **Only when the user explicitly asks.**
+
+### `integration_list` / `integration_search` / `integration_read` / `integration_send`
+
+Live Gmail, Slack, and Discord via **your own** connected accounts. Prefer these
+for inbox/channel questions; use `memory_recall` for already-ingested
+`source: connector` memories.
+
+| Tool | When |
+|---|---|
+| `integration_list` | Discover the connections *you* may use before search/send |
+| `integration_search` | `kind` + `query` — live provider hits (not memory) |
+| `integration_read` | Fetch one message; Gmail/Discord also ingest into memory |
+| `integration_send` | Outgoing email/Slack/Discord — user must request the send |
+
+| Param | Use |
+|---|---|
+| `kind` | `gmail` \| `slack` \| `discord` |
+| `query` | Gmail search syntax, or plaintext filter for Slack/Discord |
+| `message_id` | Gmail id, Slack `channel:ts`, or Discord `channel_id:message_id` |
+| `connector_id` | Pick one of several own connections; defaults to yours |
+| `to` / `subject` | Gmail recipient / subject |
+| `channel` / `thread_ts` | Slack/Discord post / thread reply |
+| `body` | Outgoing text (required for send) |
+
+Connecting accounts is a human console action (`/app/connections`), not an MCP tool.
+
+### `file_create` / `file_upload_request` / `file_update` / `file_get` / `file_list` / `file_publish` / `file_unpublish` / `file_archive` / `file_version_delete`
+
+Versioned HTML/Markdown shared files stored canonically in Postgres (append-only
+`shared_file_versions`) and mirrored eagerly to an S3-compatible bucket on
+publish/update when `TEAMSHARED_OBJECT_STORAGE_*` is configured. Files default
+private; `file_publish` generates a human-readable `slug` (from the title) and
+the public `/s/{slug}` URL (UUID `/s/{share_token}` still works as fallback).
+
+| Tool | When |
+|---|---|
+| `file_create` | New shared file (version 1, private) — inline content (small) |
+| `file_upload_request` | Get a one-time local uploader script for a large local file → `POST /v1/files/upload` creates the shared file. Pass `file_id=` to append a new version to an existing file (update mode) |
+| `file_update` | Append a new version (version = prior max + 1); old versions immutable |
+| `file_get` | Fetch a shared file with its latest version content (includes `public_url`) |
+| `file_list` | Active shared files in the caller's org, newest update first; `query` filters by title substring; each row includes `public_url`, `slug`, `share_token` |
+| `file_publish` | Stamp `share_token` + `slug`, flip to published, mirror to bucket; idempotent; returns `public_url` |
+| `file_unpublish` | Visibility back to private (token retained for audit; bucket cleaned) |
+| `file_archive` | Exclude from active lists + public route; retain full history for audit |
+| `file_version_delete` | Delete one version row (destructive). Refuses the only remaining version. If the deleted version was current, bumps `current_version` to the new max and re-mirrors the bucket when published |
+
+| Param | Use |
+|---|---|
+| `file_id` | File UUID |
+| `title` | File title (create) |
+| `content` | File body (markdown or raw HTML) — `file_create` only |
+| `content_format` | `'markdown'` (sanitized render), `'html'` (raw mirror), or `'auto'` (sniff from filename) for upload |
+| `filename` | (`file_upload_request`) hint for format sniffing + script default path |
+| `publish` | (`file_upload_request`) publish immediately and return public URLs |
+| `upload_base_url` | (`file_upload_request`) server origin; defaults to `settings.public_url` |
+| `agent` | Override attribution (audited) |
+
+The public `/s/{share_token}` route is no-auth and renders content through
+the allowlist sanitizer — no XSS surface. Console CRUD lives at `/app/files`.
+`file_upload_request` returns a self-deleting stdlib Python script; the upload
+token is single-use (~10 min TTL) and the `POST /v1/files/upload` endpoint is
+public but gated by that token (no bearer required).
+
+## Quick chooser
+
+| Need | Tool |
+|---|---|
+| Unsure which tool | `memory_tools_catalog(need="<intent>")` |
+| Is the server healthy? | `health` |
+| Server/rule version + update check | `version` |
+| Search durable memory (raw records) | `memory_recall` with durable scope + keyword anchor |
+| Synthesized answer + gaps | `memory_think` after recall, or for strategic questions |
+| One context pack for a task | `memory_assemble_context` |
+| Pre-LLM session + compress + enrich | `context_prepare` |
+| Turn-end summary + facts + close | `context_commit` |
+| Shrink a message list | `context_compress` |
+| Clean Shell/Grep/Read output | `context_normalize` |
+| Expand compressed original | `context_retrieve` |
+| Store preference/fact/event/note | `memory_remember` |
+| Private person identity (soul) | `memory_soul_get` / `memory_soul_set` (also on `memory_session_ensure`) |
+| Start-of-chat session bootstrap | `memory_session_ensure` (`user=` appends the request) |
+| Log every chat + distillation | `memory_session_*` |
+| Client incremental state | `memory_state_get` / `memory_state_set` |
+| Browse timeline | `memory_episodes_list` |
+| Atomic how-to | `memory_skill_set` / `memory_skill_get` |
+| Resolve skills a playbook uses | `memory_skill_resolve` |
+| Composed flow | `memory_playbook_set` / `memory_playbook_get` |
+| List playbooks | `memory_playbooks_list` |
+| Entity hub (wiki + memories + graph + work) | `memory_entity_view` |
+| Typed ontology entity / rekind | `memory_ontology_propose_entity` / `memory_ontology_rekind_entity` |
+| Vision / OKRs / mission | `memory_strategic_*` or `scope=["strategic"]` |
+| Tasks / assignees / blockers | `work_*` or `scope=["work"]` |
+| Task progress notes | `work_comment_add` / `work_comment_list` |
+| Projects / boards | `project_list` / `project_create` / `work_add_to_project` |
+| Structured relationships | `memory_graph_*` |
+| Remove a bad memory | `memory_forget` (user-requested only) |
+| List connected Gmail/Slack/Discord | `integration_list` |
+| Live search mail/chat | `integration_search` |
+| Fetch + ingest one message | `integration_read` |
+| Send email / Slack / Discord | `integration_send` (user-requested only) |
+| Create / update a versioned shared file | `file_create` / `file_update` |
+| Upload a large local file into a shared file | `file_upload_request` |
+| Find a shared file's public URL | `file_list(query="<title>")` → `public_url` |
+| Publish a shared file (public URL) | `file_publish` |
+| Archive a shared file (retain history) | `file_archive` |
+| Delete one version of a shared file | `file_version_delete(file_id, version)` |
+
+## Never
+
+- Don't call `memory_forget` without explicit user instruction.
+- Don't echo raw memory IDs unless the user asks.
+- Don't fabricate hits — if `memory_recall` is empty, say so.
+- Don't store secrets, tokens, or credentials in any memory tool.
+- Don't open a second session when state already has a `session_id` for this chat — `memory_session_ensure` handles reuse; never follow it with `memory_session_open`.
+- Don't store atomic instructions as playbooks (use `memory_skill_set`).
+- Don't re-call `context_normalize` on teamshared MCP outputs (middleware handles them).
+- Don't probe `TEAMSHARED_*` env vars in shell — call `health`.
+- Don't append `[tool]` turns for teamshared MCP calls (pollutes working recall).
+- Don't call `integration_send` unless the user explicitly asks to send/post/email.
+- Don't try to act through a teammate's connection — you can only use your own.
+- Don't treat empty recall as "no Slack/email" without checking `integration_list` /
+  `integration_search` when the user wants the live inbox.
