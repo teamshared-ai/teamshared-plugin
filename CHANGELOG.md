@@ -20,9 +20,10 @@
 
 ## Unreleased
 
-- **Own repo:** plugin lives at [`xhad/teamshared-cursor`](https://github.com/xhad/teamshared-cursor)
-  (this repository). Add marketplace `https://github.com/xhad/teamshared-cursor`,
-  then `/add-plugin teamshared`. The MCP server remains [`xhad/teamshared`](https://github.com/xhad/teamshared).
+- **Own repo:** plugin lives at [`teamshared-ai/teamshared-plugin`](https://github.com/teamshared-ai/teamshared-plugin)
+  (this repository; moved from `xhad/teamshared-cursor`). Add marketplace
+  `https://github.com/teamshared-ai/teamshared-plugin`, then `/add-plugin teamshared`.
+  The MCP server remains [`xhad/teamshared`](https://github.com/xhad/teamshared).
 - **Plugin logo:** ship the 512×512 brand PNG (`assets/logo.png`, same mark as
   the site) and point `plugin.json` plus the marketplace catalog at it.
   Cursor's plugin UI does not reliably render the SVG.

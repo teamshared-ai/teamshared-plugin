@@ -16,7 +16,7 @@ and is hosted at [teamshared.com](https://teamshared.com).
 
 ### From marketplace (recommended)
 
-1. **Settings → Plugins → Add marketplace** → `https://github.com/xhad/teamshared-cursor`
+1. **Settings → Plugins → Add marketplace** → `https://github.com/teamshared-ai/teamshared-plugin`
 2. Run **`/add-plugin teamshared`** or enable it under Settings → Plugins
 3. **Settings → Tools & MCP → teamshared → Connect** (email + one-time code, same as the console)
 

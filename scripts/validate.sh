@@ -60,10 +60,10 @@ if not kebab.match(name):
     sys.exit(1)
 print(f"ok  name  {name}")
 
-if plugin.get("homepage") != "https://github.com/xhad/teamshared-cursor":
+if plugin.get("homepage") != "https://github.com/teamshared-ai/teamshared-plugin":
     print(f"FAIL  plugin.json homepage, got {plugin.get('homepage')!r}")
     sys.exit(1)
-if plugin.get("repository") != "https://github.com/xhad/teamshared-cursor":
+if plugin.get("repository") != "https://github.com/teamshared-ai/teamshared-plugin":
     print(f"FAIL  plugin.json repository, got {plugin.get('repository')!r}")
     sys.exit(1)
 

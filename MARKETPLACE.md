@@ -11,7 +11,7 @@ The plugin is **MCP + the recall rule only**.
 2. Paste the repository URL:
 
    ```
-   https://github.com/xhad/teamshared-cursor
+   https://github.com/teamshared-ai/teamshared-plugin
    ```
 
 3. Install the plugin:
@@ -87,7 +87,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 ## Repo layout
 
 ```
-teamshared-cursor/
+teamshared-plugin/
 ├── .cursor-plugin/
 │   ├── marketplace.json   # git marketplace + folder picker: source ./
 │   └── plugin.json
