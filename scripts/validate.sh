@@ -26,6 +26,8 @@ absent() {
 echo "Validating teamshared plugin at $ROOT"
 check "$ROOT/.cursor-plugin/plugin.json"
 check "$ROOT/.cursor-plugin/marketplace.json"
+check "$ROOT/plugin.json"
+check "$ROOT/.mcp.json"
 check "$ROOT/mcp.json"
 check "$ROOT/rules/teamshared.mdc"
 check "$ROOT/install/codex/mcp.toml"
@@ -44,11 +46,11 @@ absent "$ROOT/commands"
 absent "$ROOT/hooks"
 
 if command -v python3 >/dev/null 2>&1; then
-  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json"
+  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json"
 import json, re, sys
 
 kebab = re.compile(r"^[a-z0-9][a-z0-9.-]*[a-z0-9]$")
-plugin_path, market_path, mcp_path = sys.argv[1:]
+plugin_path, market_path, mcp_path, open_plugin_path, open_mcp_path = sys.argv[1:]
 
 with open(plugin_path) as f:
     plugin = json.load(f)
@@ -119,7 +121,64 @@ if server.get("url") != "https://teamshared.com/mcp":
 if server.get("headers"):
     print("FAIL  mcp.json must not include headers (Cursor uses OAuth Connect)")
     sys.exit(1)
+if server.get("type") != "http":
+    print(f"FAIL  mcp.json teamshared.type must stay 'http' for Cursor, got {server.get('type')!r}")
+    sys.exit(1)
 print("ok  mcp.json  url-only OAuth")
+
+OPEN_PLUGIN_FIELDS = {
+    "$schema",
+    "name",
+    "version",
+    "description",
+    "author",
+    "homepage",
+    "repository",
+    "license",
+    "keywords",
+}
+with open(open_plugin_path) as f:
+    open_plugin = json.load(f)
+print(f"ok  JSON  {open_plugin_path}")
+extra = set(open_plugin) - OPEN_PLUGIN_FIELDS
+if extra:
+    print(f"FAIL  root plugin.json extra fields {sorted(extra)}")
+    sys.exit(1)
+if open_plugin.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
+    print(f"FAIL  root plugin.json $schema, got {open_plugin.get('$schema')!r}")
+    sys.exit(1)
+if not kebab.match(open_plugin.get("name", "")):
+    print(f"FAIL  root plugin.json name {open_plugin.get('name')!r} must be lowercase kebab-case")
+    sys.exit(1)
+for key in ("version", "description", "homepage", "repository", "license", "keywords"):
+    if open_plugin.get(key) != plugin.get(key):
+        print(f"FAIL  root plugin.json {key} must match .cursor-plugin/plugin.json")
+        sys.exit(1)
+if open_plugin.get("author") != plugin.get("author"):
+    print("FAIL  root plugin.json author must match .cursor-plugin/plugin.json")
+    sys.exit(1)
+print("ok  root plugin.json  Agent Plugins 1.0.0")
+
+with open(open_mcp_path) as f:
+    open_mcp = json.load(f)
+print(f"ok  JSON  {open_mcp_path}")
+if set(open_mcp) != {"$schema", "mcpServers"}:
+    print(f"FAIL  .mcp.json top-level keys must be $schema + mcpServers, got {sorted(open_mcp)}")
+    sys.exit(1)
+if open_mcp.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json":
+    print(f"FAIL  .mcp.json $schema, got {open_mcp.get('$schema')!r}")
+    sys.exit(1)
+open_server = (open_mcp.get("mcpServers") or {}).get("teamshared") or {}
+if open_server.get("type") != "streamable-http":
+    print(f"FAIL  .mcp.json teamshared.type must be 'streamable-http', got {open_server.get('type')!r}")
+    sys.exit(1)
+if open_server.get("url") != "https://teamshared.com/mcp":
+    print(f"FAIL  .mcp.json teamshared.url, got {open_server.get('url')!r}")
+    sys.exit(1)
+if open_server.get("headers"):
+    print("FAIL  .mcp.json must not include headers")
+    sys.exit(1)
+print("ok  .mcp.json  streamable-http")
 PY
 else
   echo "skip JSON parse (python3 not found)"

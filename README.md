@@ -20,6 +20,8 @@ and is hosted at [teamshared.com](https://teamshared.com).
 2. Run **`/add-plugin teamshared`** or enable it under Settings → Plugins
 3. **Settings → Tools & MCP → teamshared → Connect** (email + one-time code, same as the console)
 
+For [cursor.directory](https://cursor.directory/plugins/new), submit this same repo URL. Root `plugin.json` and `.mcp.json` are the Open Plugins / directory discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
+
 Installing the plugin registers the MCP server. You only click **Connect** —
 do not paste a URL or `tsk_*` token into `mcp.json`.
 
