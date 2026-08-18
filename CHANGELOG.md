@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.2 — 2026-08-18
+
+- **Rule 1.15.0:** always-on protocol is a ~130-line fetch/store loop
+  (`ensure(user=)` → keyword `memory_recall` → `context_commit` with `facts[]`
+  and `close=true`). Dropped the duplicated tool encyclopedia / Quick chooser;
+  routing stays on `memory_tools_catalog(need=...)`. Store table still names
+  `file_upload_request` and `project_*`.
+
 ## 0.9.1 — 2026-08-15
 
 - **Plugin logo:** `plugin.json` now uses the committed relative path

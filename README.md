@@ -9,7 +9,7 @@ and is hosted at [teamshared.com](https://teamshared.com).
 | Component | Purpose |
 |---|---|
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
-| `rules/teamshared.mdc` | Recall-first protocol, `repo=` + `github=` code scope, console pointer (`alwaysApply`) |
+| `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
 | `clients/` | Copy-paste protocol + MCP examples for non-Cursor harnesses (not loaded by Cursor) |
 
 ## Install
