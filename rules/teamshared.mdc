@@ -1,19 +1,22 @@
 ---
 description: Use the teamshared MCP server as persistent cross-session memory.
 alwaysApply: true
-version: 1.15.0
+version: 1.16.0
 ---
 
 # teamshared Memory Protocol
 
-<!-- teamshared-rule-version: 1.15.0 -->
+<!-- teamshared-rule-version: 1.16.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
-intentionally override it or narrow a read filter. On Cursor, connect with
-OAuth (Settings → Tools & MCP → Connect, email + OTP) — no API key in
-`mcp.json`. Other harnesses may still use a `tsk_*` bearer. Point humans at
-the console (`/app`) for sign-in, wiki, people, keys, and Connections.
+intentionally override it or narrow a read filter. On Cursor desktop, connect
+with OAuth (Settings → Tools & MCP → Connect, email + OTP) — no API key in
+`mcp.json`. Cloud agents and other headless clients have no host Connect
+helper: call `mcp_auth(email=...)`, ask the human for the emailed code, then
+`mcp_auth(email=..., code=...)` (and `org_id=` if `need_org`). Other harnesses
+may still use a `tsk_*` bearer. Point humans at the console (`/app`) for
+sign-in, wiki, people, and keys.
 
 Unsure which tool? Call `memory_tools_catalog(need="<intent>")` — do not scan
 every MCP descriptor, and do not call `scope="memory", tier="core"` as the only
@@ -22,7 +25,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this rule's frontmatter `version` (`1.15.0`) as
+versions), call `version` with this rule's frontmatter `version` (`1.16.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
@@ -67,10 +70,6 @@ memory_recall(
 3. Ground answers in hits; if empty, say so before answering from priors.
 4. Prefer `metadata.matched_keyword: true`. `memory_think` only after hits, or
    for open strategic questions.
-5. Live Gmail/Slack/Discord is `integration_list` → `integration_search` /
-   `integration_read`, not recall. Empty recall is not an empty inbox. You can
-   only use your own connection (`connector_id` from `integration_list`).
-6. Connector-synced rows have `source: connector` — ingested, not live.
 
 ## Store
 
@@ -123,9 +122,6 @@ Writes attribute to the authenticated identity.
 - `memory_forget` without an explicit user request
 - `memory_session_open` after `memory_session_ensure` already returned a session_id
 - `memory_remember` for skills, playbooks, tasks, or strategic vision
-- `integration_send` unless the user asked to send/post/email
-- Using a teammate's Gmail/Slack/Discord connection
-- Treating empty recall as no Slack/email without `integration_list` / `integration_search`
 - Appending `[tool]` turns for teamshared MCP calls
 - Probing `TEAMSHARED_*` env vars in the shell — call `health`
-- Storing secrets, tokens, or credentials in any memory tool
+- Storing secrets, tokens, credentials, or the `mcp_auth` login code
