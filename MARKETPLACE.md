@@ -82,7 +82,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - In the submission description, mention: requires the hosted teamshared MCP
   (`https://teamshared.com/mcp`) and email/OTP Connect (no API key in the
   plugin). Ships the recall-first rule only — no hooks or skills.
-- Alternative first step: list on [cursor.directory](https://cursor.directory) while waiting for official marketplace review.
+- Alternative first step: list on [cursor.directory](https://cursor.directory/plugins/new) while waiting for official marketplace review. Submit `https://github.com/teamshared-ai/teamshared-plugin` (not the old `xhad/teamshared-cursor` redirect). Root `plugin.json` and `.mcp.json` are the Open Plugins / Agent Plugins discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
 
 ## Repo layout
 
@@ -91,7 +91,9 @@ teamshared-plugin/
 ├── .cursor-plugin/
 │   ├── marketplace.json   # git marketplace + folder picker: source ./
 │   └── plugin.json
-├── mcp.json               # remote HTTP MCP (OAuth Connect, no headers)
+├── plugin.json            # Agent Plugins 1.0.0 / cursor.directory discovery
+├── .mcp.json              # Open Plugins MCP config (streamable-http)
+├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
 ├── rules/teamshared.mdc
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
