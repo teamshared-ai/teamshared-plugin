@@ -24,7 +24,9 @@ The plugin is **MCP + the recall rule only**.
    `https://teamshared.com/mcp` from the plugin's `mcp.json`.
 
 4. **Settings → Tools & MCP → teamshared → Connect** and sign in with email +
-   one-time code (same as the web console). No URL or bearer token to paste.
+   one-time code (same as the web console). Cloud and Grok Bot agents inherit
+   that account-level Connect. No URL or bearer token to paste, and do not put
+   a key in the plugin `mcp.json`.
 
 5. **Developer: Reload Window** — confirm **Settings → MCP** shows `teamshared`.
 
@@ -50,10 +52,12 @@ Symlink load uses `.cursor-plugin/plugin.json` only; no catalog is required.
 | Requirement | Why |
 |---|---|
 | teamshared server | MCP tools at [teamshared.com](https://teamshared.com) |
-| MCP OAuth Connect | Cursor authenticates via email/OTP (no API key, no pasted JSON) |
+| MCP OAuth Connect | One-time **Settings → Tools & MCP → teamshared → Connect** (email/OTP). Cloud / Grok Bot inherit it. No API key in the plugin. |
 
 Sign-in is self-service: any email + a one-time passcode (first sign-in creates
-your own org). API keys under `/app/keys` are optional for CI / other harnesses.
+your own org). After Connect, every cloud agent for that user gets TeamShared.
+Durable backup: one org `tsk_` on the MCP headers (`Authorization: Bearer tsk_…`)
+— not in the plugin `mcp.json`. Mint keys under `/app/keys`.
 
 ## Publish to Cursor Marketplace (official listing)
 
@@ -81,7 +85,8 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - Put **Agentic Labs Ltd** in the manifest `author.name` field (company name).
 - In the submission description, mention: requires the hosted teamshared MCP
   (`https://teamshared.com/mcp`) and email/OTP Connect (no API key in the
-  plugin). Ships the recall-first rule only — no hooks or skills.
+  plugin). Cloud / Grok Bot inherit that account-level Connect. Ships the
+  recall-first rule only — no hooks or skills.
 - Alternative first step: list on [cursor.directory](https://cursor.directory/plugins/new) while waiting for official marketplace review. Submit `https://github.com/teamshared-ai/teamshared-plugin` (not the old `xhad/teamshared-cursor` redirect). Root `plugin.json` and `.mcp.json` are the Open Plugins / Agent Plugins discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
 
 ## Repo layout

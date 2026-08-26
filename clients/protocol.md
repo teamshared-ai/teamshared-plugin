@@ -1,5 +1,10 @@
 # teamshared Memory Protocol (copy-paste for Hermes, Claude, and other hosts)
 
+Cursor Cloud / Grok Bot inherit account-level Connect (see the plugin README) —
+do not treat `mcp_auth` as the primary path, and do not put a key in the plugin
+`mcp.json`. This file is the paste-in protocol for other hosts that authenticate
+with a `tsk_` bearer on the MCP headers (`Authorization: Bearer tsk_…`).
+
 Paste this block into the host's system prompt, project instructions, or
 `CLAUDE.md`. MCP wiring alone does not make the model call memory tools reliably.
 

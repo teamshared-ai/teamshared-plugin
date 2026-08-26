@@ -23,7 +23,8 @@ and is hosted at [teamshared.com](https://teamshared.com).
 For [cursor.directory](https://cursor.directory/plugins/new), submit this same repo URL. Root `plugin.json` and `.mcp.json` are the Open Plugins / directory discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
 
 Installing the plugin registers the MCP server. You only click **Connect** —
-do not paste a URL or `tsk_*` token into `mcp.json`.
+do not paste a URL or `tsk_*` token into the plugin `mcp.json`. Cloud and
+Grok Bot agents inherit that account-level Cursor Connect.
 
 See [MARKETPLACE.md](MARKETPLACE.md) for publish/submission checklist.
 
@@ -46,13 +47,17 @@ ln -sf "$(pwd)" ~/.cursor/plugins/local/teamshared
 1. **Connect with email/OTP** — **Settings → Tools & MCP → teamshared → Connect**.
    Cursor opens a browser; sign in with the same email + one-time code as the
    web console (`/app`). The plugin already shipped the server URL; do not add
-   headers or a `tsk_*` token.
-2. **Developer: Reload Window** — confirm **Settings → MCP** shows `teamshared` enabled.
+   headers or a `tsk_*` token to the plugin `mcp.json`.
+2. **Cloud / Grok Bot** — they inherit that account-level Cursor Connect. After
+   the one-time Connect, every cloud agent for that user gets TeamShared.
+3. **Developer: Reload Window** — confirm **Settings → MCP** shows `teamshared` enabled.
 
 If you previously added `https://teamshared.com/mcp` by hand, remove that
 manual entry so you do not get two `teamshared` servers.
 
-API keys (`tsk_…` under `/app/keys`) remain for CI and non-Cursor harnesses.
+Durable backup: one org `tsk_` on the MCP headers (`Authorization: Bearer tsk_…`)
+for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
+`/app/keys`.
 
 ## What you get
 

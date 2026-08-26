@@ -1,9 +1,13 @@
 # Reference MCP snippets (manual setup)
 
 These files are **documentation and copy-paste examples** for non-Cursor
-harnesses. Cursor installs MCP from this plugin's `mcp.json` (URL only) and
-authenticates with **Connect** — do not paste bearer tokens into
+harnesses. Cursor desktop, Cloud, and Grok Bot inherit account-level
+**Connect** (Settings → Tools & MCP → teamshared → Connect). The plugin stays
+URL-only — do not paste a `tsk_*` key into the plugin `mcp.json` or
 `~/.cursor/mcp.json`.
+
+Durable backup for other hosts: one org `tsk_` on the MCP headers
+(`Authorization: Bearer tsk_…`).
 
 | Harness | Reference |
 |---|---|

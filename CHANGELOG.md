@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Setup story:** Cloud and Grok Bot inherit account-level Cursor Connect
+  (Settings → Tools & MCP → teamshared → Connect). Do not treat `mcp_auth` as
+  the primary path. Plugin `mcp.json` stays URL-only. Durable backup: one org
+  `tsk_` on the MCP headers.
+- **Rule 1.17.0:** same Connect inheritance copy; drop headless `mcp_auth` as
+  the default auth path.
+
 ## 0.9.2 — 2026-08-18
 
 - **Rule 1.15.0:** always-on protocol is a ~130-line fetch/store loop
