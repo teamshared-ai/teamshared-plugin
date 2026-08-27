@@ -14,19 +14,43 @@ and is hosted at [teamshared.com](https://teamshared.com).
 
 ## Install
 
-### From marketplace (recommended)
+### From git marketplace (recommended)
 
-1. **Settings → Plugins → Add marketplace** → `https://github.com/teamshared-ai/teamshared-plugin`
-2. Run **`/add-plugin teamshared`** or enable it under Settings → Plugins
+1. **Settings → Plugins → Add marketplace** → paste `https://github.com/teamshared-ai/teamshared-plugin`
+2. Run **`/add-plugin teamshared`** or enable **teamshared** under Settings → Plugins
 3. **Settings → Tools & MCP → teamshared → Connect** (email + one-time code, same as the console)
 
-For [cursor.directory](https://cursor.directory/plugins/new), submit this same repo URL. Root `plugin.json` and `.mcp.json` are the Open Plugins / directory discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
+Cloud and Grok Bot agents inherit that account-level Connect. Installing the
+plugin registers `https://teamshared.com/mcp` — you only click **Connect**.
+Do not paste a URL or token into the plugin `mcp.json`.
 
-Installing the plugin registers the MCP server. You only click **Connect** —
-do not paste a URL or `tsk_*` token into the plugin `mcp.json`. Cloud and
-Grok Bot agents inherit that account-level Cursor Connect.
+See [MARKETPLACE.md](MARKETPLACE.md) for the official Marketplace publish checklist.
 
-See [MARKETPLACE.md](MARKETPLACE.md) for publish/submission checklist.
+### cursor.directory listing
+
+Submit **this** repo at [cursor.directory/plugins/new](https://cursor.directory/plugins/new):
+
+```
+https://github.com/teamshared-ai/teamshared-plugin
+```
+
+Do not submit the old `xhad/teamshared-cursor` redirect. Root `plugin.json` and
+`.mcp.json` are the Open Plugins / directory discovery files; Cursor install
+still uses `.cursor-plugin/` and `mcp.json`.
+
+Ready-to-paste listing description:
+
+```
+TeamShared is hosted MCP plus the recall-first memory rule.
+
+Install in Cursor:
+1. Settings → Plugins → Add marketplace
+2. Paste https://github.com/teamshared-ai/teamshared-plugin
+3. /add-plugin teamshared
+4. Settings → Tools & MCP → teamshared → Connect (email + one-time code)
+
+Cloud and Grok Bot agents inherit that Connect.
+```
 
 ### From this repo (folder or symlink)
 
