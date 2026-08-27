@@ -1,7 +1,7 @@
 {
   "name": "teamshared",
   "owner": {
-    "name": "Agentic Labs Ltd"
+    "name": "Teamshared Labs"
   },
   "metadata": {
     "description": "teamshared — shared agent memory MCP plugin for Cursor",
