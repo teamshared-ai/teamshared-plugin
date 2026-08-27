@@ -157,6 +157,11 @@ for key in ("version", "description", "homepage", "repository", "license", "keyw
 if open_plugin.get("author") != plugin.get("author"):
     print("FAIL  root plugin.json author must match .cursor-plugin/plugin.json")
     sys.exit(1)
+author_name = (plugin.get("author") or {}).get("name")
+if author_name != "Agentic Labs Ltd":
+    print(f"FAIL  author.name must be 'Agentic Labs Ltd', got {author_name!r}")
+    sys.exit(1)
+print("ok  author  Agentic Labs Ltd")
 print("ok  root plugin.json  Agent Plugins 1.0.0")
 
 with open(open_mcp_path) as f:
