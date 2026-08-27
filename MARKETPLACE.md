@@ -82,12 +82,29 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 
 ### Submission notes
 
-- Put **Agentic Labs Ltd** in the manifest `author.name` field (company name).
+- Manifest `author.name` is **Teamshared Labs** in both `plugin.json` and
+  `.cursor-plugin/plugin.json`. Marketplace `owner.name` matches.
 - In the submission description, mention: requires the hosted teamshared MCP
   (`https://teamshared.com/mcp`) and email/OTP Connect (no API key in the
   plugin). Cloud / Grok Bot inherit that account-level Connect. Ships the
-  recall-first rule only — no hooks or skills.
+  recall-first rule only — no hooks or skills. Do not mention a `tsk_` key
+  or `mcp_auth` in the marketplace description.
 - Alternative first step: list on [cursor.directory](https://cursor.directory/plugins/new) while waiting for official marketplace review. Submit `https://github.com/teamshared-ai/teamshared-plugin` (not the old `xhad/teamshared-cursor` redirect). Root `plugin.json` and `.mcp.json` are the Open Plugins / Agent Plugins discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
+
+### Ready-to-paste marketplace description
+
+Use this on [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
+Do not add a `tsk_` key or `mcp_auth` steps.
+
+```
+TeamShared registers the hosted TeamShared MCP (https://teamshared.com/mcp)
+and ships the recall-first memory rule only — no hooks, skills, slash
+commands, or extra agents.
+
+After install, connect with email and a one-time code under Settings →
+Tools & MCP → teamshared → Connect (same as the web console). Cloud and
+Grok Bot agents inherit that account-level Connect.
+```
 
 ## Repo layout
 

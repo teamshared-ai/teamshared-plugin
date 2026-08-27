@@ -157,6 +157,18 @@ for key in ("version", "description", "homepage", "repository", "license", "keyw
 if open_plugin.get("author") != plugin.get("author"):
     print("FAIL  root plugin.json author must match .cursor-plugin/plugin.json")
     sys.exit(1)
+author_name = (plugin.get("author") or {}).get("name")
+if author_name != "Teamshared Labs":
+    print(f"FAIL  author.name must be 'Teamshared Labs', got {author_name!r}")
+    sys.exit(1)
+print("ok  author  Teamshared Labs")
+if (market.get("owner") or {}).get("name") != author_name:
+    print(
+        "FAIL  marketplace.json owner.name must match author.name, "
+        f"got {(market.get('owner') or {}).get('name')!r}"
+    )
+    sys.exit(1)
+print("ok  marketplace owner  Teamshared Labs")
 print("ok  root plugin.json  Agent Plugins 1.0.0")
 
 with open(open_mcp_path) as f:
