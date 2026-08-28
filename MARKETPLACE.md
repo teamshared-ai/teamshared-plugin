@@ -83,7 +83,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 
 ### Submission notes
 
-- Manifest `author.name` is **Teamshared Labs** in both `plugin.json` and
+- Manifest `author.name` is **Loreum Labs Ltd** in both `plugin.json` and
   `.cursor-plugin/plugin.json`. Marketplace `owner.name` matches.
 - In the submission description, mention: requires the hosted teamshared MCP
   (`https://teamshared.com/mcp`) and email/OTP Connect (no API key in the
