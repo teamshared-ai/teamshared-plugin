@@ -10,7 +10,7 @@
 - **cursor.directory copy:** install path is Add marketplace → this GitHub
   URL → `/add-plugin teamshared` → Settings → Tools & MCP → Connect. Cloud /
   Grok inherit. Listing paste block does not mention `mcp_auth` or `tsk_`.
-- **Author:** `author.name` is **Teamshared Labs** in `plugin.json` and
+- **Author:** `author.name` is **Loreum Labs Ltd** in `plugin.json` and
   `.cursor-plugin/plugin.json` (matches marketplace owner). `validate.sh`
   now asserts that name.
 - **Setup story:** Cloud and Grok Bot inherit account-level Cursor Connect
