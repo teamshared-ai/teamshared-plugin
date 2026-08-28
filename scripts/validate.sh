@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Structural checks for the Cursor plugin: MCP + recall rule only.
+# Structural checks for the Cursor plugin: MCP + recall rule + two hooks.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -40,17 +40,20 @@ check "$ROOT/assets/logo.svg"
 check "$ROOT/LICENSE"
 check "$ROOT/README.md"
 check "$ROOT/CHANGELOG.md"
+check "$ROOT/hooks/hooks.json"
+check "$ROOT/hooks/capture.py"
+check "$ROOT/hooks/post_tool_use.py"
+check "$ROOT/hooks/pre_compact.py"
 absent "$ROOT/skills"
 absent "$ROOT/agents"
 absent "$ROOT/commands"
-absent "$ROOT/hooks"
 
 if command -v python3 >/dev/null 2>&1; then
-  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json"
+  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json" "$ROOT/hooks/hooks.json"
 import json, re, sys
 
 kebab = re.compile(r"^[a-z0-9][a-z0-9.-]*[a-z0-9]$")
-plugin_path, market_path, mcp_path, open_plugin_path, open_mcp_path = sys.argv[1:]
+plugin_path, market_path, mcp_path, open_plugin_path, open_mcp_path, hooks_path = sys.argv[1:]
 
 with open(plugin_path) as f:
     plugin = json.load(f)
@@ -84,11 +87,16 @@ if plugin.get("logo") != "assets/logo.png":
     sys.exit(1)
 print("ok  logo  assets/logo.png")
 
-for key in ("skills", "agents", "commands", "hooks"):
+if plugin.get("hooks") != "./hooks/hooks.json":
+    print(f"FAIL  plugin.json hooks must be './hooks/hooks.json', got {plugin.get('hooks')!r}")
+    sys.exit(1)
+print("ok  hooks  ./hooks/hooks.json")
+
+for key in ("skills", "agents", "commands"):
     if key in plugin:
         print(f"FAIL  plugin.json must not declare {key}")
         sys.exit(1)
-print("ok  no extra Cursor components in manifest")
+print("ok  no skills/agents/commands in manifest")
 
 with open(market_path) as f:
     market = json.load(f)
@@ -120,6 +128,9 @@ if server.get("url") != "https://teamshared.com/mcp":
     sys.exit(1)
 if server.get("headers"):
     print("FAIL  mcp.json must not include headers (Cursor uses OAuth Connect)")
+    sys.exit(1)
+if "tsk_" in json.dumps(mcp):
+    print("FAIL  mcp.json must not contain a tsk_ key")
     sys.exit(1)
 if server.get("type") != "http":
     print(f"FAIL  mcp.json teamshared.type must stay 'http' for Cursor, got {server.get('type')!r}")
@@ -190,11 +201,46 @@ if open_server.get("url") != "https://teamshared.com/mcp":
 if open_server.get("headers"):
     print("FAIL  .mcp.json must not include headers")
     sys.exit(1)
+if "tsk_" in json.dumps(open_mcp):
+    print("FAIL  .mcp.json must not contain a tsk_ key")
+    sys.exit(1)
 print("ok  .mcp.json  streamable-http")
+
+with open(hooks_path) as f:
+    hooks = json.load(f)
+print(f"ok  JSON  {hooks_path}")
+events = hooks.get("hooks") or {}
+if set(events) != {"postToolUse", "preCompact"}:
+    print(f"FAIL  hooks.json must register only postToolUse and preCompact, got {sorted(events)}")
+    sys.exit(1)
+if not events["postToolUse"] or not events["preCompact"]:
+    print("FAIL  hooks.json postToolUse and preCompact must each have a command")
+    sys.exit(1)
+matcher = events["postToolUse"][0].get("matcher")
+if matcher != "Shell":
+    print(f"FAIL  postToolUse matcher must be Shell, got {matcher!r}")
+    sys.exit(1)
+if "tsk_" in json.dumps(hooks):
+    print("FAIL  hooks.json must not contain a tsk_ key")
+    sys.exit(1)
+print("ok  hooks  postToolUse + preCompact only")
 PY
+  python3 "$ROOT/hooks/test_capture.py" -q
 else
   echo "skip JSON parse (python3 not found)"
 fi
+
+for doc in "$ROOT/README.md" "$ROOT/MARKETPLACE.md"; do
+  if ! grep -q "postToolUse" "$doc" || ! grep -q "preCompact" "$doc"; then
+    echo "FAIL  $doc must mention postToolUse and preCompact"
+    FAIL=1
+  elif ! grep -Eqi "no skills|still no skills" "$doc"; then
+    echo "FAIL  $doc must say the plugin still has no skills/agents/commands"
+    FAIL=1
+  else
+    echo "ok  docs  $(basename "$doc") two hooks, no skills"
+  fi
+done
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "Validation failed."

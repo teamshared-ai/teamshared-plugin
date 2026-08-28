@@ -1,12 +1,12 @@
 ---
 description: Use the teamshared MCP server as persistent cross-session memory.
 alwaysApply: true
-version: 1.17.0
+version: 1.18.0
 ---
 
 # teamshared Memory Protocol
 
-<!-- teamshared-rule-version: 1.17.0 -->
+<!-- teamshared-rule-version: 1.18.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -25,7 +25,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this rule's frontmatter `version` (`1.17.0`) as
+versions), call `version` with this rule's frontmatter `version` (`1.18.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
@@ -76,6 +76,11 @@ memory_recall(
 **Session (every turn):** `ensure(user=)` captures the request; `context_commit`
 `summary` is a faithful assistant reply — not UI boilerplate. Truncate long
 tool output. Never store secrets, tokens, or credentials.
+
+The plugin also ships **two Cursor hooks** (no others): `postToolUse` writes a
+short episodic fact when a Shell test/lint/command fails; `preCompact` writes a
+short session summary. Both use the same ingest path (`context_commit`) and the
+existing Connect session. Do not duplicate that write in the same turn.
 
 **Durable `facts[]`** (still true next week; one dense paragraph; `subject` +
 tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /

@@ -1,7 +1,9 @@
 # teamshared (Cursor plugin)
 
-Registers the teamshared MCP server and ships the recall-first memory rule.
-Nothing else — no skills, slash commands, hooks, or continual-learning agent.
+Registers the teamshared MCP server, the recall-first memory rule, and two
+Cursor hooks (`postToolUse` for failed test/lint/shell, `preCompact` for a
+short session summary). Nothing else — no skills, slash commands, extra
+hooks, or extra agents.
 
 The MCP server itself lives in [`xhad/teamshared`](https://github.com/xhad/teamshared)
 and is hosted at [teamshared.com](https://teamshared.com).
@@ -10,6 +12,7 @@ and is hosted at [teamshared.com](https://teamshared.com).
 |---|---|
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
+| `hooks/` | Two Cursor hooks only: `postToolUse` (failed test/lint/shell) and `preCompact` |
 | `clients/` | Copy-paste protocol + MCP examples for non-Cursor harnesses (not loaded by Cursor) |
 
 ## Install
@@ -41,7 +44,9 @@ still uses `.cursor-plugin/` and `mcp.json`.
 Ready-to-paste listing description:
 
 ```
-TeamShared is hosted MCP plus the recall-first memory rule.
+TeamShared is hosted MCP plus the recall-first memory rule and two Cursor
+hooks (failed test/lint/shell + preCompact). No skills, slash commands, or
+extra agents.
 
 Install in Cursor:
 1. Settings → Plugins → Add marketplace
@@ -89,9 +94,12 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   (registered by `mcp.json` when the plugin is installed).
 - **Rule**: injects the recall-first protocol on every agent turn, and points
   teammates to the web console (`/app`) for human actions.
+- **Two hooks only**: `postToolUse` appends a short episodic fact when a
+  Shell test/lint/command fails (command + error tail, secrets stripped).
+  `preCompact` writes a short session summary through `context_commit`.
+  Both reuse the existing Connect session — no `tsk_` in `mcp.json`.
 
-Session logging and context compression live in the MCP tools and the rule —
-not in Cursor hooks.
+Still no skills, slash commands, extra agents, or extra hooks.
 
 ## Other clients
 
