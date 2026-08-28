@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **0.10.0 Cursor hooks:** two hooks only — `postToolUse` (failed
+  test/lint/shell → short episodic fact: command + error tail, secrets
+  stripped) and `preCompact` (short session summary). Both append through
+  `memory_session_ensure` + `context_commit` on the existing Connect
+  session. No `tsk_` in `mcp.json`. Still no skills, agents, or commands.
 - **cursor.directory copy:** install path is Add marketplace → this GitHub
   URL → `/add-plugin teamshared` → Settings → Tools & MCP → Connect. Cloud /
   Grok inherit. Listing paste block does not mention `mcp_auth` or `tsk_`.

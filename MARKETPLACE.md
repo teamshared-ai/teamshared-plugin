@@ -3,7 +3,8 @@
 How to install **teamshared** from this repo, and how to submit to the
 [Cursor Marketplace](https://cursor.com/marketplace).
 
-The plugin is **MCP + the recall rule only**.
+The plugin is **MCP + the recall rule + two Cursor hooks**
+(`postToolUse` and `preCompact`). Still no skills, agents, or commands.
 
 ## Install (team / git marketplace)
 
@@ -68,7 +69,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - [ ] `.cursor-plugin/marketplace.json` lists `teamshared` with `"source": "./"`
 - [ ] `.cursor-plugin/plugin.json` is valid JSON with kebab-case `name`, `version`, `description`, `author`, `license`, `logo`, `mcpServers`
 - [ ] `mcp.json` registers `https://teamshared.com/mcp` with no `headers`
-- [ ] Plugin ships only `rules/teamshared.mdc` (no `skills/`, `agents/`, `commands/`, `hooks/`)
+- [ ] Plugin ships `rules/teamshared.mdc` and two hooks in `hooks/` (`postToolUse`, `preCompact` only; no `skills/`, `agents/`, `commands/`, or extra hooks)
 - [ ] `README.md` covers install, MCP config, and what the plugin does
 - [ ] `LICENSE` and `CHANGELOG.md` present
 - [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`; both `plugin.json` and `marketplace.json` reference `assets/logo.png` (relative path, not a remote URL)
@@ -87,8 +88,9 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - In the submission description, mention: requires the hosted teamshared MCP
   (`https://teamshared.com/mcp`) and email/OTP Connect (no API key in the
   plugin). Cloud / Grok Bot inherit that account-level Connect. Ships the
-  recall-first rule only — no hooks or skills. Do not mention a `tsk_` key
-  or `mcp_auth` in the marketplace description.
+  recall-first rule plus two hooks (`postToolUse`, `preCompact`) — no
+  skills, agents, or commands. Do not mention a `tsk_` key or `mcp_auth`
+  in the marketplace description.
 - Alternative first step: list on [cursor.directory](https://cursor.directory/plugins/new) while waiting for official marketplace review. Submit `https://github.com/teamshared-ai/teamshared-plugin` (not the old `xhad/teamshared-cursor` redirect). Root `plugin.json` and `.mcp.json` are the Open Plugins / Agent Plugins discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
 
 ### Ready-to-paste marketplace description
@@ -98,12 +100,14 @@ Do not add a `tsk_` key or `mcp_auth` steps.
 
 ```
 TeamShared registers the hosted TeamShared MCP (https://teamshared.com/mcp)
-and ships the recall-first memory rule only — no hooks, skills, slash
-commands, or extra agents.
+and ships the recall-first memory rule plus two Cursor hooks: postToolUse
+(failed test/lint/shell) and preCompact (short session summary). Still no
+skills, slash commands, or extra agents.
 
 After install, connect with email and a one-time code under Settings →
 Tools & MCP → teamshared → Connect (same as the web console). Cloud and
-Grok Bot agents inherit that account-level Connect.
+Grok Bot agents inherit that account-level Connect. The hooks reuse that
+Connect session — do not paste a key into the plugin.
 ```
 
 ## Repo layout
@@ -117,6 +121,7 @@ teamshared-plugin/
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
 ├── rules/teamshared.mdc
+├── hooks/                 # postToolUse + preCompact only
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg
