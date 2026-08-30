@@ -1,22 +1,25 @@
 ---
 description: Use the teamshared MCP server as persistent cross-session memory.
 alwaysApply: true
-version: 1.18.0
+version: 1.19.0
 ---
 
 # teamshared Memory Protocol
 
-<!-- teamshared-rule-version: 1.18.0 -->
+<!-- teamshared-rule-version: 1.19.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
-intentionally override it or narrow a read filter. Cloud and Grok Bot agents
-inherit account-level Cursor Connect. One-time setup is Settings → Tools & MCP
-→ teamshared → Connect (email + OTP). After that, every cloud agent for that
-user gets TeamShared. The plugin stays URL-only for desktop Connect — do not
-put a key in the plugin `mcp.json`. Durable backup: one org `tsk_` on the MCP
-headers (`Authorization: Bearer tsk_…`). Point humans at the console (`/app`)
-for sign-in, wiki, people, and keys.
+intentionally override it or narrow a read filter. On Cursor desktop, connect
+with OAuth (Settings → Tools & MCP → Connect, email + OTP) — no API key in
+`mcp.json`. Grok Bot iOS native Connect is unsupported; sign in from Desktop
+Cursor instead. Cloud / Grok Bot agents inherit that account-level Connect;
+the one-time setup is Settings → Tools & MCP → teamshared → Connect. Durable
+backup if Connect does not follow the agent: one org `tsk_` on the MCP
+headers (`Authorization: Bearer tsk_…`), same as Codex. Do not call
+`mcp_auth` as the first hop — it is a last-resort fallback after initialize
+when the host has no token. Other harnesses use a `tsk_*` bearer. Point
+humans at the console (`/app`) for sign-in, wiki, people, and keys.
 
 Unsure which tool? Call `memory_tools_catalog(need="<intent>")` — do not scan
 every MCP descriptor, and do not call `scope="memory", tier="core"` as the only
@@ -25,7 +28,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this rule's frontmatter `version` (`1.18.0`) as
+versions), call `version` with this rule's frontmatter `version` (`1.19.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
@@ -91,6 +94,7 @@ tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /
 | "I prefer / always / never …" | `preference` |
 | Stable repo/org fact | `fact` |
 | One-off event worth logging | `event` |
+| Outreach send (mentions Person + Campaign) | `outreach` |
 | Misc working note | `note` |
 
 Do **not** put skills, playbooks, tasks, or strategic vision in `facts[]` /
@@ -100,13 +104,31 @@ Do **not** put skills, playbooks, tasks, or strategic vision in `facts[]` /
 |---|---|
 | Atomic how-to | `memory_skill_set` |
 | Composed flow (`tool_recipe.skills`) | `memory_playbook_set` |
-| Assignable task | `work_*` (comments for progress) |
+| Assignable task / outreach beat | `work_*` (`part_of=` a campaign Project) |
+| Person / campaign CRM | `memory_entity_view` (playbook `gtm-outreach`) |
 | Board / project | `project_*` |
 | Large local file upload | `file_upload_request` |
 | Other shared files | `file_*` |
 | Vision / OKRs | `memory_strategic_*` |
 
 `close=true` distills the session into durable memory.
+
+## Campaign CRM
+
+Use the seeded ontology. Do **not** invent Contact or Deal kinds. Gmail /
+Telegram send skills live on the Grok Bot — do not ingest inbox into
+TeamShared.
+
+| Need | Use |
+|---|---|
+| Contact | `Person` (`memory_ontology_propose_entity`). Properties: email, name, telegram, role, stage |
+| Company | `Organization`. `Person --works_at--> Organization` (`works_for` is an alias of `works_at`) |
+| Campaign | `Project` (`status` = active / paused / done). People and bots `works_on` it |
+| Beat | `work_create(..., part_of=<campaign>)`; `assigned_to` a Person or Agent |
+| After send | `memory_remember(kind="outreach")` mentioning Person and Campaign |
+
+Playbook `gtm-outreach`: `memory_entity_view` → next work → bot sends → log
+Memory. That Person view is the CRM record.
 
 ## Code scope
 
@@ -127,6 +149,7 @@ Writes attribute to the authenticated identity.
 - `memory_forget` without an explicit user request
 - `memory_session_open` after `memory_session_ensure` already returned a session_id
 - `memory_remember` for skills, playbooks, tasks, or strategic vision
+- Inventing Contact or Deal kinds — use Person / Organization / Project / WorkItem
 - Appending `[tool]` turns for teamshared MCP calls
 - Probing `TEAMSHARED_*` env vars in the shell — call `health`
-- Storing secrets, tokens, credentials, or login/OTP codes
+- Storing secrets, tokens, credentials, or the `mcp_auth` login code
