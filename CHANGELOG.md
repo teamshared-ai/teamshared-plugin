@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- **0.10.0 Cursor hooks:** two hooks only — `postToolUse` (failed
+- **Rule 1.19.0:** copy the canonical memory rule from `xhad/teamshared`
+  (`7b524d5`, after #85). Adds Campaign CRM (Person / Organization /
+  campaign-as-Project, `gtm-outreach`, `kind=outreach`). No mcp.json,
+  hooks, or marketplace submit changes.
+- **0.10.0 Cursor hooks:** two hooks only — `postToolUse` (failed)
   test/lint/shell → short episodic fact: command + error tail, secrets
   stripped) and `preCompact` (short session summary). Both append through
   `memory_session_ensure` + `context_commit` on the existing Connect
