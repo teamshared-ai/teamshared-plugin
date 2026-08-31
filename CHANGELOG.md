@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Rule 1.22.0:** copy the canonical memory rule from `xhad/teamshared`
+  (live server `c98c737`, 1.22.0 after #110 / squash `b05b0f2`). Adds
+  identity get-by-name routing (named playbook/skill/entity →
+  `memory_playbook_get` / `memory_skill_get` / `memory_entity_view`, not
+  recall; `soul` + `agent_memory`; `memory_agent_get`). No mcp.json,
+  hooks, or marketplace submit changes.
 - **Rule 1.19.0:** copy the canonical memory rule from `xhad/teamshared`
   (`7b524d5`, after #85). Adds Campaign CRM (Person / Organization /
   campaign-as-Project, `gtm-outreach`, `kind=outreach`). No mcp.json,
