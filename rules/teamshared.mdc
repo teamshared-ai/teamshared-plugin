@@ -1,12 +1,12 @@
 ---
 description: Use the teamshared MCP server as persistent cross-session memory.
 alwaysApply: true
-version: 1.23.0
+version: 1.24.0
 ---
 
 # teamshared Memory Protocol
 
-<!-- teamshared-rule-version: 1.23.0 -->
+<!-- teamshared-rule-version: 1.24.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -28,7 +28,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this rule's frontmatter `version` (`1.23.0`) as
+versions), call `version` with this rule's frontmatter `version` (`1.24.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
@@ -41,8 +41,11 @@ Run in order:
 1. **`memory_session_ensure(repo=..., topic=..., fresh=<first turn>, user=<request>)`**
    — recovers or rotates the session and appends the substantive user request.
    `fresh=true` only on the first turn of a new chat (or a clear mid-chat pivot).
-   Adopt a non-empty `soul` (private human) and `agent_memory` (org-shared
-   Agent entity) from the ensure payload.
+   Bound work (console Chat bind, named work id, or `agent_run_*` context) →
+   pass `work_id=`; else a named playbook → `playbook_slug=`. Omit both when
+   unbound — never dump the playbook catalog. Adopt non-empty `soul` (private
+   human), `agent_memory` (org-shared Agent), and `playbook` `{name,
+   description, body_md, slug}` from the ensure payload.
 2. **`memory_recall(...)`** for keyword search (architecture, debugging, past
    work). Named playbook/skill/entity → get-by-name, not recall.
 3. **Do the work.**
@@ -112,7 +115,7 @@ Do **not** put skills, playbooks, tasks, or strategic vision in `facts[]` /
 | Spawn Cursor coding worker | `agent_run_start` (`github=owner/repo`) |
 | Follow / status / cancel cloud agent | `agent_run_followup` / `_status` / `_cancel` |
 | Large local file upload | `file_upload_request` |
-| Other shared files | `file_*` (`work_id=` hangs a file on a task) |
+| Other shared files | `file_*` (`work_id=` hangs a file on a task; `project_id=` on a project) |
 | Vision / OKRs | `memory_strategic_*` |
 
 `close=true` distills the session into durable memory.
