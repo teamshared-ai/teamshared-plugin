@@ -13,7 +13,8 @@ Durable backup for other hosts: one org `tsk_` on the MCP headers
 |---|---|
 | Cursor | ``protocol.md`` + plugin rule ``../rules/teamshared.mdc`` |
 | Hermes | ``hermes.config.yaml`` (example URLs) |
-| Claude | ``claude-desktop.json`` (remote + local stdio) |
+| Claude Code | Marketplace plugin ``../claude/`` (`/plugin install teamshared@teamshared`) |
+| Claude Desktop | ``claude-desktop.json`` (remote + local stdio) |
 | Codex | [``../install/codex/README.md``](../install/codex/README.md) — ``codex mcp add`` or merge [``mcp.toml``](../install/codex/mcp.toml) into ``.codex/config.toml`` |
 | Pi | ``../install/pi/mcp.json`` |
 | OpenClaw | ``../../src/teamshared/clients/openclaw.md`` in the repo |
