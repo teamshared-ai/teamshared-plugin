@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Native Codex marketplace plugin:** `.agents/plugins/marketplace.json`
+  catalogs `plugins/teamshared/` for
+  `codex plugin marketplace add teamshared-ai/teamshared-plugin` and
+  `codex plugin add teamshared@teamshared`. The package registers the hosted
+  streamable HTTP MCP through OAuth discovery and adds an implicitly invokable
+  `teamshared-memory` recall/commit workflow. No token, custom header, or
+  Cursor hook is included. The existing `install/codex/` TOML path remains the
+  manual `TEAMSHARED_TOKEN` alternative.
 - **Claude Code marketplace plugin:** `.claude-plugin/marketplace.json`
   catalogs `claude/` so users can
   `/plugin marketplace add teamshared-ai/teamshared-plugin` then

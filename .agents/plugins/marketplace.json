@@ -1,0 +1,20 @@
+{
+  "name": "teamshared",
+  "interface": {
+    "displayName": "TeamShared"
+  },
+  "plugins": [
+    {
+      "name": "teamshared",
+      "source": {
+        "source": "local",
+        "path": "./plugins/teamshared"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

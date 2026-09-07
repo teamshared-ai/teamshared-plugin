@@ -1,0 +1,39 @@
+{
+  "name": "teamshared",
+  "version": "0.10.0",
+  "description": "Shared team memory for Codex through the hosted TeamShared MCP server and a recall-first workflow.",
+  "author": {
+    "name": "Loreum Labs Ltd",
+    "url": "https://github.com/teamshared-ai"
+  },
+  "homepage": "https://teamshared.com",
+  "repository": "https://github.com/teamshared-ai/teamshared-plugin",
+  "license": "MIT",
+  "keywords": [
+    "teamshared",
+    "mcp",
+    "memory",
+    "agent-memory",
+    "shared-brain"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "TeamShared",
+    "shortDescription": "Shared memory across Codex tasks and repos.",
+    "longDescription": "Connects Codex to TeamShared's hosted MCP server and adds a recall-first workflow for durable team memory across tasks and repositories.",
+    "developerName": "Loreum Labs Ltd",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://teamshared.com",
+    "defaultPrompt": [
+      "Recall what the team knows about this repository.",
+      "Summarize recent work and continue where we left off.",
+      "Save this decision as durable shared context."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
