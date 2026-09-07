@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Claude Code marketplace plugin:** `.claude-plugin/marketplace.json`
+  catalogs `claude/` so users can
+  `/plugin marketplace add teamshared-ai/teamshared-plugin` then
+  `/plugin install teamshared@teamshared`. Registers remote MCP
+  `https://teamshared.com/mcp` with `Authorization: Bearer ${TEAMSHARED_TOKEN}`
+  (`tsk_` minted at `/app/keys`; never committed). Thin
+  `skills/teamshared-memory` pointer; no Cursor hooks in the Claude package.
+  Cursor Connect path unchanged.
 - **Codex install package:** first-class `install/codex/` with `codex mcp add`
   and project-local `.codex/config.toml` merge. Auth is `TEAMSHARED_TOKEN`
   (`tsk_`, mint at `/app/keys`) via `bearer_token_env_var` →

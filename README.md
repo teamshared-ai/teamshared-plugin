@@ -1,9 +1,12 @@
-# teamshared (Cursor plugin)
+# teamshared (Cursor plugin + Claude Code marketplace)
 
-Registers the teamshared MCP server, the recall-first memory rule, and two
-Cursor hooks (`postToolUse` for failed test/lint/shell, `preCompact` for a
-short session summary). Nothing else — no skills, slash commands, extra
-hooks, or extra agents.
+Registers the teamshared MCP server. The **Cursor** plugin also ships the
+recall-first memory rule and two Cursor hooks (`postToolUse` for failed
+test/lint/shell, `preCompact` for a short session summary). The Cursor
+plugin still has no skills, slash commands, extra hooks, or extra agents.
+
+This repo also ships a **Claude Code** marketplace plugin under `claude/`
+(remote MCP + `TEAMSHARED_TOKEN` auth). Claude Code does not inherit Cursor Connect.
 
 The MCP server itself lives in [`xhad/teamshared`](https://github.com/xhad/teamshared)
 and is hosted at [teamshared.com](https://teamshared.com).
@@ -13,6 +16,8 @@ and is hosted at [teamshared.com](https://teamshared.com).
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
 | `hooks/` | Two Cursor hooks only: `postToolUse` (failed test/lint/shell) and `preCompact` |
+| `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN`; no Cursor hooks) |
+| `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `clients/` | Copy-paste protocol + MCP examples for non-Cursor harnesses (not loaded by Cursor) |
 
 ## Install
@@ -28,6 +33,28 @@ plugin registers `https://teamshared.com/mcp` — you only click **Connect**.
 Do not paste a URL or token into the plugin `mcp.json`.
 
 See [MARKETPLACE.md](MARKETPLACE.md) for the official Marketplace publish checklist.
+
+### Claude Code (marketplace)
+
+Claude Code does not inherit Cursor Connect. Use a `tsk_` org key in
+`TEAMSHARED_TOKEN` — never commit it.
+
+```
+/plugin marketplace add teamshared-ai/teamshared-plugin
+/plugin install teamshared@teamshared
+/reload-plugins
+```
+
+Then export the key in the environment that launches Claude Code:
+
+```bash
+export TEAMSHARED_TOKEN=tsk_...   # mint under https://teamshared.com/app/keys
+```
+
+The Claude package registers `https://teamshared.com/mcp` with
+`Authorization: Bearer ${TEAMSHARED_TOKEN}` (same placeholder idea as
+`install/claude/mcp.json`). Confirm tools appear under `/mcp` as
+`plugin:teamshared:teamshared`. Details: [`claude/README.md`](claude/README.md).
 
 ### cursor.directory listing
 
@@ -99,11 +126,14 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   `preCompact` writes a short session summary through `context_commit`.
   Both reuse the existing Connect session — no `tsk_` in `mcp.json`.
 
-Still no skills, slash commands, extra agents, or extra hooks.
+The Cursor plugin still has no skills, slash commands, extra agents, or extra
+hooks. The Claude Code package adds only a thin `teamshared-memory` skill.
 
 ## Other clients
 
 See [`clients/`](clients/) for Hermes, Claude Desktop, and protocol markdown.
+Claude Code should use the marketplace plugin above, not a hand-merged
+`~/.claude.json`, unless you are debugging.
 
 ### Codex
 

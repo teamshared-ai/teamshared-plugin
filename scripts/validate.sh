@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Structural checks for the Cursor plugin: MCP + recall rule + two hooks.
+# Structural checks for the Cursor plugin (MCP + recall rule + two hooks)
+# and the Claude Code marketplace package (remote MCP + TEAMSHARED_TOKEN).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -45,16 +46,34 @@ check "$ROOT/hooks/hooks.json"
 check "$ROOT/hooks/capture.py"
 check "$ROOT/hooks/post_tool_use.py"
 check "$ROOT/hooks/pre_compact.py"
+check "$ROOT/.claude-plugin/marketplace.json"
+check "$ROOT/claude/.claude-plugin/plugin.json"
+check "$ROOT/claude/.mcp.json"
+check "$ROOT/claude/README.md"
+check "$ROOT/claude/skills/teamshared-memory/SKILL.md"
 absent "$ROOT/skills"
 absent "$ROOT/agents"
 absent "$ROOT/commands"
+absent "$ROOT/claude/hooks"
+absent "$ROOT/claude/agents"
+absent "$ROOT/claude/commands"
 
 if command -v python3 >/dev/null 2>&1; then
-  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json" "$ROOT/hooks/hooks.json"
+  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json" "$ROOT/hooks/hooks.json" "$ROOT/.claude-plugin/marketplace.json" "$ROOT/claude/.claude-plugin/plugin.json" "$ROOT/claude/.mcp.json"
 import json, re, sys
 
 kebab = re.compile(r"^[a-z0-9][a-z0-9.-]*[a-z0-9]$")
-plugin_path, market_path, mcp_path, open_plugin_path, open_mcp_path, hooks_path = sys.argv[1:]
+(
+    plugin_path,
+    market_path,
+    mcp_path,
+    open_plugin_path,
+    open_mcp_path,
+    hooks_path,
+    claude_market_path,
+    claude_plugin_path,
+    claude_mcp_path,
+) = sys.argv[1:]
 
 with open(plugin_path) as f:
     plugin = json.load(f)
@@ -225,6 +244,82 @@ if "tsk_" in json.dumps(hooks):
     print("FAIL  hooks.json must not contain a tsk_ key")
     sys.exit(1)
 print("ok  hooks  postToolUse + preCompact only")
+
+with open(claude_market_path) as f:
+    claude_market = json.load(f)
+print(f"ok  JSON  {claude_market_path}")
+if claude_market.get("name") != "teamshared":
+    print(f"FAIL  Claude marketplace name must be 'teamshared', got {claude_market.get('name')!r}")
+    sys.exit(1)
+if (claude_market.get("owner") or {}).get("name") != author_name:
+    print(
+        "FAIL  Claude marketplace owner.name must match author.name, "
+        f"got {(claude_market.get('owner') or {}).get('name')!r}"
+    )
+    sys.exit(1)
+claude_plugins = claude_market.get("plugins") or []
+if [p.get("name") for p in claude_plugins] != ["teamshared"]:
+    print(
+        "FAIL  Claude marketplace plugins must be [teamshared], "
+        f"got {[p.get('name') for p in claude_plugins]}"
+    )
+    sys.exit(1)
+if claude_plugins[0].get("source") != "./claude":
+    print(
+        "FAIL  Claude marketplace source must be './claude', "
+        f"got {claude_plugins[0].get('source')!r}"
+    )
+    sys.exit(1)
+print("ok  Claude marketplace  teamshared@teamshared source ./claude")
+
+with open(claude_plugin_path) as f:
+    claude_plugin = json.load(f)
+print(f"ok  JSON  {claude_plugin_path}")
+if claude_plugin.get("name") != "teamshared":
+    print(f"FAIL  Claude plugin.json name must be 'teamshared', got {claude_plugin.get('name')!r}")
+    sys.exit(1)
+if claude_plugin.get("mcpServers") != "./.mcp.json":
+    print(
+        "FAIL  Claude plugin.json mcpServers must be './.mcp.json', "
+        f"got {claude_plugin.get('mcpServers')!r}"
+    )
+    sys.exit(1)
+if claude_plugin.get("hooks"):
+    print("FAIL  Claude plugin.json must not declare hooks")
+    sys.exit(1)
+if (claude_plugin.get("author") or {}).get("name") != author_name:
+    print("FAIL  Claude plugin.json author.name must match Cursor author.name")
+    sys.exit(1)
+print("ok  Claude plugin.json  no hooks")
+
+with open(claude_mcp_path) as f:
+    claude_mcp = json.load(f)
+print(f"ok  JSON  {claude_mcp_path}")
+claude_server = (claude_mcp.get("mcpServers") or {}).get("teamshared") or {}
+if claude_server.get("url") != "https://teamshared.com/mcp":
+    print(
+        "FAIL  Claude .mcp.json url must be https://teamshared.com/mcp, "
+        f"got {claude_server.get('url')!r}"
+    )
+    sys.exit(1)
+if claude_server.get("type") not in ("http", "streamable-http"):
+    print(
+        "FAIL  Claude .mcp.json type must be http (or streamable-http), "
+        f"got {claude_server.get('type')!r}"
+    )
+    sys.exit(1)
+auth = ((claude_server.get("headers") or {}).get("Authorization") or "")
+if auth != "Bearer ${TEAMSHARED_TOKEN}":
+    print(
+        "FAIL  Claude .mcp.json Authorization must be "
+        "'Bearer ${TEAMSHARED_TOKEN}', "
+        f"got {auth!r}"
+    )
+    sys.exit(1)
+if re.search(r"tsk_[A-Za-z0-9]", json.dumps(claude_mcp)):
+    print("FAIL  Claude .mcp.json must not contain a real tsk_ secret")
+    sys.exit(1)
+print("ok  Claude .mcp.json  remote MCP + TEAMSHARED_TOKEN")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
 else
@@ -303,6 +398,21 @@ else
   echo "skip Codex TOML parse (python3 not found)"
 fi
 
+if ! grep -q '/plugin marketplace add teamshared-ai/teamshared-plugin' "$ROOT/README.md"; then
+  echo "FAIL  README.md must document Claude Code marketplace add"
+  FAIL=1
+elif ! grep -q '/plugin install teamshared@teamshared' "$ROOT/README.md"; then
+  echo "FAIL  README.md must document /plugin install teamshared@teamshared"
+  FAIL=1
+elif ! grep -q 'TEAMSHARED_TOKEN' "$ROOT/README.md" || ! grep -q 'TEAMSHARED_TOKEN' "$ROOT/claude/.mcp.json"; then
+  echo "FAIL  README.md and claude/.mcp.json must document TEAMSHARED_TOKEN"
+  FAIL=1
+elif ! grep -q 'does not inherit Cursor Connect' "$ROOT/README.md"; then
+  echo "FAIL  README.md must say Claude Code does not inherit Cursor Connect"
+  FAIL=1
+else
+  echo "ok  docs  Claude Code marketplace + TEAMSHARED_TOKEN"
+fi
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "Validation failed."

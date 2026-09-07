@@ -3,8 +3,12 @@
 How to install **teamshared** from this repo, and how to submit to the
 [Cursor Marketplace](https://cursor.com/marketplace).
 
-The plugin is **MCP + the recall rule + two Cursor hooks**
+The **Cursor** plugin is **MCP + the recall rule + two Cursor hooks**
 (`postToolUse` and `preCompact`). Still no skills, agents, or commands.
+
+Claude Code installs from the same GitHub URL via
+`.claude-plugin/marketplace.json` (separate package under `claude/`; no
+Cursor hooks). Official Anthropic marketplace submit is out of scope.
 
 ## Install (team / git marketplace)
 
@@ -110,18 +114,35 @@ Grok Bot agents inherit that account-level Connect. The hooks reuse that
 Connect session — do not paste a key into the plugin.
 ```
 
+## Claude Code marketplace
+
+Users add this repo as a Claude Code marketplace (catalog at
+`.claude-plugin/marketplace.json`), then install the `claude/` package:
+
+```
+/plugin marketplace add teamshared-ai/teamshared-plugin
+/plugin install teamshared@teamshared
+```
+
+Auth is `TEAMSHARED_TOKEN` (`tsk_…` bearer on the MCP headers). Claude
+Code does not inherit Cursor Connect. Never commit the key. See
+[`claude/README.md`](claude/README.md).
+
 ## Repo layout
 
 ```
 teamshared-plugin/
 ├── .cursor-plugin/
-│   ├── marketplace.json   # git marketplace + folder picker: source ./
+│   ├── marketplace.json   # Cursor git marketplace + folder picker: source ./
 │   └── plugin.json
+├── .claude-plugin/
+│   └── marketplace.json   # Claude Code catalog: source ./claude
+├── claude/                # Claude Code plugin (MCP + TEAMSHARED_TOKEN; no Cursor hooks)
 ├── plugin.json            # Agent Plugins 1.0.0 / cursor.directory discovery
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
 ├── rules/teamshared.mdc
-├── hooks/                 # postToolUse + preCompact only
+├── hooks/                 # postToolUse + preCompact only (Cursor)
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
