@@ -123,6 +123,7 @@ teamshared-plugin/
 ├── rules/teamshared.mdc
 ├── hooks/                 # postToolUse + preCompact only
 ├── clients/               # protocol + manual MCP examples for other harnesses
+├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg
 ├── README.md

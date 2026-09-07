@@ -1,5 +1,17 @@
-# teamshared — merge into ./.codex/config.toml (project-local; run Codex from repo root)
+# teamshared — merge into ./.codex/config.toml (project-local; run Codex
+# from a trusted repo root) or ~/.codex/config.toml (user-wide).
+#
+# Codex sends Authorization: Bearer <TEAMSHARED_TOKEN>.
+# Mint a tsk_ key at https://teamshared.com/app/keys and export it in the
+# shell you launch Codex from — do not paste the key into this file.
+#
+#   export TEAMSHARED_TOKEN=tsk_...
+#
+# Equivalent CLI (writes ~/.codex/config.toml):
+#   codex mcp add teamshared --url https://teamshared.com/mcp \
+#     --bearer-token-env-var TEAMSHARED_TOKEN
+
 [mcp_servers.teamshared]
-url = "__MCP_URL__"
-http_headers = { Authorization = "Bearer __TEAMSHARED_TOKEN__" }
+url = "https://teamshared.com/mcp"
+bearer_token_env_var = "TEAMSHARED_TOKEN"
 enabled = true

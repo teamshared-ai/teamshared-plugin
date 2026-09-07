@@ -105,6 +105,26 @@ Still no skills, slash commands, extra agents, or extra hooks.
 
 See [`clients/`](clients/) for Hermes, Claude Desktop, and protocol markdown.
 
+### Codex
+
+Codex is TOML, not Cursor's JSON `mcp.json`. Mint a `tsk_` key at
+[teamshared.com/app/keys](https://teamshared.com/app/keys), export it, then
+register the hosted MCP (Codex sends `Authorization: Bearer tsk_…`):
+
+```bash
+export TEAMSHARED_TOKEN=tsk_...   # from /app/keys — never commit this
+codex mcp add teamshared \
+  --url https://teamshared.com/mcp \
+  --bearer-token-env-var TEAMSHARED_TOKEN
+```
+
+Or merge [`install/codex/mcp.toml`](install/codex/mcp.toml) into project-local
+`.codex/config.toml` and run Codex from that trusted repo root. Full steps:
+[`install/codex/README.md`](install/codex/README.md).
+
+Cursor desktop, Cloud, and Grok Bot still use **Connect** — do not add this
+`tsk_` block to the plugin `mcp.json`.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

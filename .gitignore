@@ -4,5 +4,6 @@
 .cursor/mcp.json
 .cursor/plugins/
 .cursor/hooks/state/
+.codex/
 __pycache__/
 *.pyc
