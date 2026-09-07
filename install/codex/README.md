@@ -79,6 +79,10 @@ should see `teamshared` and memory tools (`memory_recall`, `memory_remember`,
 …). A 401 usually means `TEAMSHARED_TOKEN` was not exported in the shell
 that started Codex.
 
+On **Codex Cloud**, set `TEAMSHARED_TOKEN` as an **environment variable**
+(not a Secret). Secrets are wiped before the agent phase; MCP auth happens
+on every tool call, so a Secret-only key will 401 after setup.
+
 ## Memory protocol
 
 MCP wiring alone does not make the model call memory tools on every turn.
