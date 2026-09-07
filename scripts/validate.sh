@@ -31,6 +31,7 @@ check "$ROOT/.mcp.json"
 check "$ROOT/mcp.json"
 check "$ROOT/rules/teamshared.mdc"
 check "$ROOT/install/codex/mcp.toml"
+check "$ROOT/install/codex/README.md"
 check "$ROOT/install/pi/mcp.json"
 check "$ROOT/install/hermes/mcp.yaml"
 check "$ROOT/install/hermes/capture.py"
@@ -241,6 +242,67 @@ for doc in "$ROOT/README.md" "$ROOT/MARKETPLACE.md"; do
     echo "ok  docs  $(basename "$doc") two hooks, no skills"
   fi
 done
+
+if ! grep -q "codex mcp add" "$ROOT/README.md" \
+  || ! grep -q "TEAMSHARED_TOKEN" "$ROOT/README.md" \
+  || ! grep -q "/app/keys" "$ROOT/README.md" \
+  || ! grep -q "install/codex/README.md" "$ROOT/README.md"; then
+  echo "FAIL  README.md must document Codex mcp add, TEAMSHARED_TOKEN, /app/keys, and install/codex/README.md"
+  FAIL=1
+else
+  echo "ok  docs  README Codex section"
+fi
+
+if ! grep -q "install/codex/README.md" "$ROOT/clients/README.md"; then
+  echo "FAIL  clients/README.md must link to install/codex/README.md"
+  FAIL=1
+else
+  echo "ok  docs  clients/README Codex link"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY' "$ROOT/install/codex/mcp.toml" "$ROOT/install/codex/README.md"
+import re, sys
+from pathlib import Path
+
+toml_path, readme_path = map(Path, sys.argv[1:])
+toml = toml_path.read_text()
+readme = readme_path.read_text()
+
+if 'url = "https://teamshared.com/mcp"' not in toml:
+    print("FAIL  install/codex/mcp.toml url must be https://teamshared.com/mcp")
+    sys.exit(1)
+if 'bearer_token_env_var = "TEAMSHARED_TOKEN"' not in toml:
+    print("FAIL  install/codex/mcp.toml must use bearer_token_env_var = TEAMSHARED_TOKEN")
+    sys.exit(1)
+if re.search(r"tsk_[A-Za-z0-9]", toml):
+    print("FAIL  install/codex/mcp.toml must not contain a tsk_ secret")
+    sys.exit(1)
+if "__TEAMSHARED_TOKEN__" in toml or "__MCP_URL__" in toml:
+    print("FAIL  install/codex/mcp.toml must use the hosted URL and env var, not curl-installer placeholders")
+    sys.exit(1)
+print("ok  install/codex/mcp.toml  hosted URL + env bearer")
+
+for needle in (
+    "codex mcp add",
+    "TEAMSHARED_TOKEN",
+    "/app/keys",
+    ".codex/config.toml",
+    "Authorization: Bearer",
+    "https://teamshared.com/mcp",
+):
+    if needle not in readme:
+        print(f"FAIL  install/codex/README.md must mention {needle!r}")
+        sys.exit(1)
+if re.search(r"tsk_[A-Za-z0-9]", readme):
+    print("FAIL  install/codex/README.md must not contain a tsk_ secret")
+    sys.exit(1)
+print("ok  install/codex/README.md  few-step Codex setup")
+PY
+else
+  echo "skip Codex TOML parse (python3 not found)"
+fi
+
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "Validation failed."

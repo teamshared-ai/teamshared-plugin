@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Codex install package:** first-class `install/codex/` with `codex mcp add`
+  and project-local `.codex/config.toml` merge. Auth is `TEAMSHARED_TOKEN`
+  (`tsk_`, mint at `/app/keys`) via `bearer_token_env_var` →
+  `Authorization: Bearer`. Cursor `mcp.json` stays URL-only.
 - **Rule 1.22.0:** copy the canonical memory rule from `xhad/teamshared`
   (live server `c98c737`, 1.22.0 after #110 / squash `b05b0f2`). Adds
   identity get-by-name routing (named playbook/skill/entity →
