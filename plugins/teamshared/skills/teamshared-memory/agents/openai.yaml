@@ -1,0 +1,15 @@
+interface:
+  display_name: "TeamShared Memory"
+  short_description: "Recall and preserve shared team context"
+  default_prompt: "Use $teamshared-memory to recall relevant project context before helping me."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "teamshared"
+      description: "TeamShared persistent team memory"
+      transport: "streamable_http"
+      url: "https://teamshared.com/mcp"
+
+policy:
+  allow_implicit_invocation: true

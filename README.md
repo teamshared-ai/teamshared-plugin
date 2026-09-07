@@ -1,4 +1,4 @@
-# teamshared (Cursor plugin + Claude Code marketplace)
+# teamshared (Cursor, Claude Code, and Codex plugins)
 
 Registers the teamshared MCP server. The **Cursor** plugin also ships the
 recall-first memory rule and two Cursor hooks (`postToolUse` for failed
@@ -7,6 +7,10 @@ plugin still has no skills, slash commands, extra hooks, or extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
 (remote MCP + `TEAMSHARED_TOKEN` auth). Claude Code does not inherit Cursor Connect.
+
+The native **Codex** package under `plugins/teamshared/` uses the server's MCP
+OAuth discovery flow and includes a recall-first `teamshared-memory` skill. A
+manual Codex TOML setup remains available under `install/codex/`.
 
 The MCP server itself lives in [`xhad/teamshared`](https://github.com/xhad/teamshared)
 and is hosted at [teamshared.com](https://teamshared.com).
@@ -18,6 +22,8 @@ and is hosted at [teamshared.com](https://teamshared.com).
 | `hooks/` | Two Cursor hooks only: `postToolUse` (failed test/lint/shell) and `preCompact` |
 | `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN`; no Cursor hooks) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
+| `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
+| `plugins/teamshared/` | Native Codex plugin (OAuth MCP connection + recall-first skill) |
 | `clients/` | Copy-paste protocol + MCP examples for non-Cursor harnesses (not loaded by Cursor) |
 
 ## Install
@@ -55,6 +61,20 @@ The Claude package registers `https://teamshared.com/mcp` with
 `Authorization: Bearer ${TEAMSHARED_TOKEN}` (same placeholder idea as
 `install/claude/mcp.json`). Confirm tools appear under `/mcp` as
 `plugin:teamshared:teamshared`. Details: [`claude/README.md`](claude/README.md).
+
+### Codex (native plugin marketplace)
+
+The native Codex package uses TeamShared's MCP OAuth discovery flow, so it does
+not require `TEAMSHARED_TOKEN` or store an authorization header.
+
+```bash
+codex plugin marketplace add teamshared-ai/teamshared-plugin
+codex plugin add teamshared@teamshared
+```
+
+Restart the Codex app, start a new task, and connect TeamShared when prompted.
+The package lives under [`plugins/teamshared/`](plugins/teamshared/) and is
+cataloged by [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
 
 ### cursor.directory listing
 
@@ -127,17 +147,19 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   Both reuse the existing Connect session — no `tsk_` in `mcp.json`.
 
 The Cursor plugin still has no skills, slash commands, extra agents, or extra
-hooks. The Claude Code package adds only a thin `teamshared-memory` skill.
+hooks. The Claude Code and Codex packages each add a thin
+`teamshared-memory` skill.
 
 ## Other clients
 
 See [`clients/`](clients/) for Hermes, Claude Desktop, and protocol markdown.
-Claude Code should use the marketplace plugin above, not a hand-merged
-`~/.claude.json`, unless you are debugging.
+Claude Code and Codex should use their marketplace plugins above unless you are
+debugging a manual client configuration.
 
-### Codex
+### Codex (manual TOML alternative)
 
-Codex is TOML, not Cursor's JSON `mcp.json`. Mint a `tsk_` key at
+For manual MCP registration without the native plugin, Codex uses TOML rather
+than Cursor's JSON `mcp.json`. Mint a `tsk_` key at
 [teamshared.com/app/keys](https://teamshared.com/app/keys), export it, then
 register the hosted MCP (Codex sends `Authorization: Bearer tsk_…`):
 
@@ -151,6 +173,8 @@ codex mcp add teamshared \
 Or merge [`install/codex/mcp.toml`](install/codex/mcp.toml) into project-local
 `.codex/config.toml` and run Codex from that trusted repo root. Full steps:
 [`install/codex/README.md`](install/codex/README.md).
+
+Use either the native marketplace plugin or the manual TOML entry, not both.
 
 Cursor desktop, Cloud, and Grok Bot still use **Connect** — do not add this
 `tsk_` block to the plugin `mcp.json`.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Structural checks for the Cursor plugin (MCP + recall rule + two hooks)
-# and the Claude Code marketplace package (remote MCP + TEAMSHARED_TOKEN).
+# Structural checks for the Cursor plugin (MCP + recall rule + two hooks),
+# Claude Code marketplace package, and native Codex marketplace package.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -51,6 +51,12 @@ check "$ROOT/claude/.claude-plugin/plugin.json"
 check "$ROOT/claude/.mcp.json"
 check "$ROOT/claude/README.md"
 check "$ROOT/claude/skills/teamshared-memory/SKILL.md"
+check "$ROOT/.agents/plugins/marketplace.json"
+check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
+check "$ROOT/plugins/teamshared/.mcp.json"
+check "$ROOT/plugins/teamshared/README.md"
+check "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md"
+check "$ROOT/plugins/teamshared/skills/teamshared-memory/agents/openai.yaml"
 absent "$ROOT/skills"
 absent "$ROOT/agents"
 absent "$ROOT/commands"
@@ -322,6 +328,88 @@ if re.search(r"tsk_[A-Za-z0-9]", json.dumps(claude_mcp)):
 print("ok  Claude .mcp.json  remote MCP + TEAMSHARED_TOKEN")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
+  python3 - <<'PY' "$ROOT/.agents/plugins/marketplace.json" "$ROOT/plugins/teamshared/.codex-plugin/plugin.json" "$ROOT/plugins/teamshared/.mcp.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md" "$ROOT/.cursor-plugin/plugin.json"
+import json, re, sys
+from pathlib import Path
+
+market_path, plugin_path, mcp_path, skill_path, cursor_plugin_path = map(Path, sys.argv[1:])
+
+with market_path.open() as f:
+    market = json.load(f)
+print(f"ok  JSON  {market_path}")
+if market.get("name") != "teamshared":
+    print(f"FAIL  Codex marketplace name must be 'teamshared', got {market.get('name')!r}")
+    sys.exit(1)
+if (market.get("interface") or {}).get("displayName") != "TeamShared":
+    print("FAIL  Codex marketplace displayName must be 'TeamShared'")
+    sys.exit(1)
+entries = market.get("plugins") or []
+if [entry.get("name") for entry in entries] != ["teamshared"]:
+    print("FAIL  Codex marketplace must contain only the teamshared plugin")
+    sys.exit(1)
+entry = entries[0]
+if (entry.get("source") or {}) != {"source": "local", "path": "./plugins/teamshared"}:
+    print(f"FAIL  Codex marketplace source, got {entry.get('source')!r}")
+    sys.exit(1)
+if entry.get("policy") != {"installation": "AVAILABLE", "authentication": "ON_INSTALL"}:
+    print(f"FAIL  Codex marketplace policy, got {entry.get('policy')!r}")
+    sys.exit(1)
+if entry.get("category") != "Productivity":
+    print(f"FAIL  Codex marketplace category, got {entry.get('category')!r}")
+    sys.exit(1)
+print("ok  Codex marketplace  teamshared@teamshared source ./plugins/teamshared")
+
+with plugin_path.open() as f:
+    plugin = json.load(f)
+with cursor_plugin_path.open() as f:
+    cursor_plugin = json.load(f)
+print(f"ok  JSON  {plugin_path}")
+if plugin.get("name") != "teamshared":
+    print(f"FAIL  Codex plugin name, got {plugin.get('name')!r}")
+    sys.exit(1)
+if plugin.get("version") != cursor_plugin.get("version"):
+    print("FAIL  Codex plugin version must match Cursor plugin version")
+    sys.exit(1)
+if (plugin.get("author") or {}).get("name") != "Loreum Labs Ltd":
+    print("FAIL  Codex plugin author.name must be 'Loreum Labs Ltd'")
+    sys.exit(1)
+if plugin.get("skills") != "./skills/" or plugin.get("mcpServers") != "./.mcp.json":
+    print("FAIL  Codex plugin must declare ./skills/ and ./.mcp.json")
+    sys.exit(1)
+interface = plugin.get("interface") or {}
+for field in ("displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt"):
+    if field not in interface:
+        print(f"FAIL  Codex plugin interface missing {field}")
+        sys.exit(1)
+print("ok  Codex plugin.json  MCP + teamshared-memory skill")
+
+with mcp_path.open() as f:
+    mcp = json.load(f)
+print(f"ok  JSON  {mcp_path}")
+if set(mcp) != {"mcpServers"}:
+    print(f"FAIL  Codex .mcp.json top-level keys, got {sorted(mcp)}")
+    sys.exit(1)
+server = (mcp.get("mcpServers") or {}).get("teamshared") or {}
+if server != {"type": "streamable-http", "url": "https://teamshared.com/mcp"}:
+    print(f"FAIL  Codex MCP config, got {server!r}")
+    sys.exit(1)
+if re.search(r"tsk_[A-Za-z0-9]", json.dumps(mcp)):
+    print("FAIL  Codex .mcp.json must not contain a tsk_ secret")
+    sys.exit(1)
+print("ok  Codex .mcp.json  OAuth-discovered streamable HTTP")
+
+skill = skill_path.read_text()
+if "name: teamshared-memory" not in skill or "description:" not in skill:
+    print("FAIL  Codex skill frontmatter is incomplete")
+    sys.exit(1)
+if "[TODO:" in skill or "## Every turn" not in skill:
+    print("FAIL  Codex skill must be complete and include the every-turn workflow")
+    sys.exit(1)
+if re.search(r"tsk_[A-Za-z0-9]", skill):
+    print("FAIL  Codex skill must not contain a tsk_ secret")
+    sys.exit(1)
+print("ok  Codex teamshared-memory skill")
+PY
 else
   echo "skip JSON parse (python3 not found)"
 fi
@@ -346,6 +434,17 @@ if ! grep -q "codex mcp add" "$ROOT/README.md" \
   FAIL=1
 else
   echo "ok  docs  README Codex section"
+fi
+
+if ! grep -q "codex plugin marketplace add teamshared-ai/teamshared-plugin" "$ROOT/README.md" \
+  || ! grep -q "codex plugin add teamshared@teamshared" "$ROOT/README.md" \
+  || ! grep -q "MCP OAuth" "$ROOT/README.md" \
+  || ! grep -q "codex plugin marketplace add teamshared-ai/teamshared-plugin" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "codex plugin add teamshared@teamshared" "$ROOT/plugins/teamshared/README.md"; then
+  echo "FAIL  README files must document the native Codex marketplace, install command, and OAuth"
+  FAIL=1
+else
+  echo "ok  docs  native Codex marketplace + OAuth"
 fi
 
 if ! grep -q "install/codex/README.md" "$ROOT/clients/README.md"; then
