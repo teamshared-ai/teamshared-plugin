@@ -12,7 +12,7 @@ The native **Codex** package under `plugins/teamshared/` uses the server's MCP
 OAuth discovery flow and includes a recall-first `teamshared-memory` skill. A
 manual Codex TOML setup remains available under `install/codex/`.
 
-The MCP server itself lives in [`xhad/teamshared`](https://github.com/xhad/teamshared)
+The MCP server itself lives in [`teamshared-ai/teamshared`](https://github.com/teamshared-ai/teamshared)
 and is hosted at [teamshared.com](https://teamshared.com).
 
 | Component | Purpose |

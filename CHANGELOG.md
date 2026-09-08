@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **README:** live MCP server pointer is
+  [`teamshared-ai/teamshared`](https://github.com/teamshared-ai/teamshared)
+  (the product repo moved from `xhad/teamshared`). Historical changelog
+  copy-from lines and the `io.github.xhad/teamshared` registry listing are
+  unchanged.
 - **Native Codex marketplace plugin:** `.agents/plugins/marketplace.json`
   catalogs `plugins/teamshared/` for
   `codex plugin marketplace add teamshared-ai/teamshared-plugin` and
