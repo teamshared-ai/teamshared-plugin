@@ -63,7 +63,7 @@ Always resolve `repo=` for session logging and code-scoped memory:
    otherwise the workspace root; strip leading `/`, replace `/` with `-`.
 2. **GitHub repo (`github=`)** — when `gh` is available,
    `gh repo view --json nameWithOwner` → pass `github=<nameWithOwner>` (e.g.
-   `xhad/teamshared`). Portable across machines; stored as `github:<owner>/<repo>`.
+   `teamshared-ai/teamshared`). Portable across machines; stored as `github:<owner>/<repo>`.
 3. Never use `owner/repo` as `repo=` (invalid). Use both when you have both.
 
 ## Remember durable things

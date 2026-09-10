@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **clients/protocol.md:** github scope example is now
+  `teamshared-ai/teamshared` (was `xhad/teamshared`). Historical
+  changelog copy-from lines and the `io.github.xhad/teamshared`
+  registry listing are unchanged.
 - **README:** live MCP server pointer is
   [`teamshared-ai/teamshared`](https://github.com/teamshared-ai/teamshared)
   (the product repo moved from `xhad/teamshared`). Historical changelog
