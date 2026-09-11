@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Claude Code: OAuth for the MCP connection.** Removed the static
+  `Authorization: Bearer ${TEAMSHARED_TOKEN}` header from `claude/.mcp.json`.
+  Claude Code has its own native MCP OAuth flow (auto-detects the server
+  needs auth, `/mcp` → Authenticate → browser login → token in the system
+  keychain — same idea as Cursor's Connect, confirmed working via
+  `claude mcp list` showing the header-less server as "Needs authentication").
+  A static header on the server config preempts that auto-detection, which is
+  why it was never triggering before. `TEAMSHARED_TOKEN` is now scoped to what
+  it's actually needed for: the capture hooks, which run as separate
+  subprocesses with no access to the OAuth keychain and always required their
+  own token regardless. Updated `scripts/validate.sh` (was asserting the
+  header must equal `Bearer ${TEAMSHARED_TOKEN}` and that README.md say
+  "does not inherit Cursor Connect" — both now assert the opposite),
+  `claude/README.md`, `claude/skills/teamshared-memory/SKILL.md`, and the
+  root `README.md`'s Claude Code section.
 - **0.13.0 protocol 1.27.0:** all three marketplace packages advertise
   protocol **1.27.0** so `version` upgrades can complete (Codex was stuck
   on plugin 0.12.0 / protocol 1.24.0 vs server 1.26.0). Cursor package
