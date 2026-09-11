@@ -3,8 +3,10 @@
 How to install **teamshared** from this repo, and how to submit to the
 [Cursor Marketplace](https://cursor.com/marketplace).
 
-The **Cursor** plugin is **MCP + the recall rule + two Cursor hooks**
-(`postToolUse` and `preCompact`). Still no skills, agents, or commands.
+The **Cursor** plugin is **MCP + the recall rule + Cursor hooks** that
+capture Agent Chat (`sessionStart`, `beforeSubmitPrompt`,
+`afterAgentResponse`, `stop`, `sessionEnd`) plus `postToolUse` and
+`preCompact`. Still no skills, agents, or commands.
 
 Claude Code installs from the same GitHub URL via
 `.claude-plugin/marketplace.json` (separate package under `claude/`; no
@@ -73,7 +75,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - [ ] `.cursor-plugin/marketplace.json` lists `teamshared` with `"source": "./"`
 - [ ] `.cursor-plugin/plugin.json` is valid JSON with kebab-case `name`, `version`, `description`, `author`, `license`, `logo`, `mcpServers`
 - [ ] `mcp.json` registers `https://teamshared.com/mcp` with no `headers`
-- [ ] Plugin ships `rules/teamshared.mdc` and two hooks in `hooks/` (`postToolUse`, `preCompact` only; no `skills/`, `agents/`, `commands/`, or extra hooks)
+- [ ] Plugin ships `rules/teamshared.mdc` and Cursor hooks in `hooks/` (chat capture + `postToolUse` + `preCompact`; no `skills/`, `agents/`, or `commands/`)
 - [ ] `README.md` covers install, MCP config, and what the plugin does
 - [ ] `LICENSE` and `CHANGELOG.md` present
 - [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`; both `plugin.json` and `marketplace.json` reference `assets/logo.png` (relative path, not a remote URL)
@@ -92,9 +94,9 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - In the submission description, mention: requires the hosted teamshared MCP
   (`https://teamshared.com/mcp`) and email/OTP Connect (no API key in the
   plugin). Cloud / Grok Bot inherit that account-level Connect. Ships the
-  recall-first rule plus two hooks (`postToolUse`, `preCompact`) — no
-  skills, agents, or commands. Do not mention a `tsk_` key or `mcp_auth`
-  in the marketplace description.
+  recall-first rule plus Cursor hooks that capture Agent Chat (and
+  `postToolUse` / `preCompact`) — no skills, agents, or commands. Do not
+  mention a `tsk_` key or `mcp_auth` in the marketplace description.
 - Alternative first step: list on [cursor.directory](https://cursor.directory/plugins/new) while waiting for official marketplace review. Submit `https://github.com/teamshared-ai/teamshared-plugin` (not the old `xhad/teamshared-cursor` redirect). Root `plugin.json` and `.mcp.json` are the Open Plugins / Agent Plugins discovery files; Cursor install still uses `.cursor-plugin/` and `mcp.json`.
 
 ### Ready-to-paste marketplace description
@@ -104,9 +106,10 @@ Do not add a `tsk_` key or `mcp_auth` steps.
 
 ```
 TeamShared registers the hosted TeamShared MCP (https://teamshared.com/mcp)
-and ships the recall-first memory rule plus two Cursor hooks: postToolUse
-(failed test/lint/shell) and preCompact (short session summary). Still no
-skills, slash commands, or extra agents.
+and ships the recall-first memory rule plus Cursor hooks that capture
+Agent Chat in near-real-time, plus postToolUse (failed test/lint/shell)
+and preCompact (short session summary). Still no skills, slash commands,
+or extra agents.
 
 After install, connect with email and a one-time code under Settings →
 Tools & MCP → teamshared → Connect (same as the web console). Cloud and
@@ -142,7 +145,7 @@ teamshared-plugin/
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
 ├── rules/teamshared.mdc
-├── hooks/                 # postToolUse + preCompact only (Cursor)
+├── hooks/                 # Agent Chat capture + postToolUse + preCompact (Cursor)
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)

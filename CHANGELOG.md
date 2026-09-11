@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **0.11.0 Cursor chat-capture hooks:** Agent Chat turns are appended to
+  TeamShared in near-real-time without relying on the agent calling
+  `memory_session_ensure` / `context_commit`. New hooks: `sessionStart`
+  (map `conversation_id` → working session), `beforeSubmitPrompt` (redacted
+  user prompt), `afterAgentResponse` (redacted assistant text), `stop`
+  (aborted/error note only — does not distill after every turn), and
+  `sessionEnd` (close + distill). Existing `postToolUse` + `preCompact`
+  behavior is unchanged. Ingest still uses hosted MCP
+  (`memory_session_ensure` + `memory_session_append` / `context_commit` /
+  `memory_session_close`) with the Cursor Connect token. Fail-open, secret
+  scrubbing, no `tsk_` in `mcp.json`. Cloud agents may skip
+  `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
 - **clients/protocol.md:** github scope example is now
   `teamshared-ai/teamshared` (was `xhad/teamshared`). Historical
   changelog copy-from lines and the `io.github.xhad/teamshared`
