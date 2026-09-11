@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Structural checks for the Cursor plugin (MCP + recall rule + chat-capture hooks),
-# Claude Code marketplace package (MCP + 1.24 skill + official capture hooks),
-# and native Codex marketplace package (OAuth MCP + 1.24 skill + official capture hooks).
+# Claude Code marketplace package (MCP + 1.27 skill + official capture hooks),
+# and native Codex marketplace package (OAuth MCP + 1.27 skill + official capture hooks).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -414,7 +414,7 @@ from pathlib import Path
 skill = Path(claude_skill_path).read_text()
 status = Path(claude_status_path).read_text()
 for needle in (
-    "1.24.0",
+    "1.27.0",
     "work_id",
     "playbook_slug",
     "soul",
@@ -422,6 +422,8 @@ for needle in (
     "memory_playbook_get",
     "memory_skill_get",
     "memory_entity_view",
+    "memory_changes_since",
+    "degraded",
     "installed_rule_version",
     "~/.claude/rules/teamshared.md",
     "TEAMSHARED_TOKEN",
@@ -440,7 +442,10 @@ if re.search(r"tsk_[A-Za-z0-9]", skill) or re.search(r"tsk_[A-Za-z0-9]", status)
 if "name: status" not in status or "health" not in status:
     print("FAIL  Claude /teamshared:status skill is incomplete")
     sys.exit(1)
-print("ok  Claude teamshared-memory 1.24.0 + status skill")
+if "1.27.0" not in status:
+    print("FAIL  Claude status skill must mention protocol 1.27.0")
+    sys.exit(1)
+print("ok  Claude teamshared-memory 1.27.0 + status skill")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
@@ -589,7 +594,7 @@ skill = skill_path.read_text()
 status = status_path.read_text()
 openai_yaml = openai_yaml_path.read_text()
 for needle in (
-    "1.24.0",
+    "1.27.0",
     "work_id",
     "playbook_slug",
     "soul",
@@ -597,6 +602,8 @@ for needle in (
     "memory_playbook_get",
     "memory_skill_get",
     "memory_entity_view",
+    "memory_changes_since",
+    "degraded",
     "installed_rule_version",
     "~/.codex/AGENTS.md",
     "SessionStart",
@@ -620,10 +627,13 @@ if re.search(r"tsk_[A-Za-z0-9]", skill) or re.search(r"tsk_[A-Za-z0-9]", status)
 if "name: status" not in status or "health" not in status:
     print("FAIL  Codex $status skill is incomplete")
     sys.exit(1)
+if "1.27.0" not in status:
+    print("FAIL  Codex status skill must mention protocol 1.27.0")
+    sys.exit(1)
 if "allow_implicit_invocation: true" not in openai_yaml:
     print("FAIL  Codex openai.yaml must allow implicit skill invocation")
     sys.exit(1)
-print("ok  Codex teamshared-memory 1.24.0 + status skill")
+print("ok  Codex teamshared-memory 1.27.0 + status skill")
 PY
 else
   echo "skip JSON parse (python3 not found)"
@@ -671,7 +681,7 @@ if ! grep -q "SessionStart" "$ROOT/README.md" \
   || ! grep -q "StopFailure" "$ROOT/plugins/teamshared/README.md" \
   || ! grep -q "keyring" "$ROOT/plugins/teamshared/README.md" \
   || ! grep -q "/hooks" "$ROOT/plugins/teamshared/README.md" \
-  || ! grep -q "1.24.0" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "1.27.0" "$ROOT/plugins/teamshared/README.md" \
   || ! grep -q '~/.codex/AGENTS.md' "$ROOT/plugins/teamshared/README.md"; then
   echo "FAIL  README files must document Codex SessionStart, capture vs Claude, /hooks trust, and AGENTS.md"
   FAIL=1
@@ -751,13 +761,73 @@ fi
 if ! grep -q 'SessionStart' "$ROOT/claude/README.md" \
   || ! grep -q 'UserPromptSubmit' "$ROOT/claude/README.md" \
   || ! grep -q 'PostToolUseFailure' "$ROOT/claude/README.md" \
-  || ! grep -q '1.24.0' "$ROOT/claude/README.md" \
+  || ! grep -q '1.27.0' "$ROOT/claude/README.md" \
   || ! grep -q '/teamshared:status' "$ROOT/claude/README.md" \
   || ! grep -q '~/.claude/rules/teamshared.md' "$ROOT/claude/README.md"; then
-  echo "FAIL  claude/README.md must document official hooks, 1.24.0, status, and the Claude write path"
+  echo "FAIL  claude/README.md must document official hooks, 1.27.0, status, and the Claude write path"
   FAIL=1
 else
-  echo "ok  docs  claude/README hooks + 1.24.0"
+  echo "ok  docs  claude/README hooks + 1.27.0"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY' "$ROOT/rules/teamshared.mdc" "$ROOT/hooks/capture.py" "$ROOT/claude/hooks/capture.py" "$ROOT/plugins/teamshared/hooks/capture.py"
+import re, sys
+from pathlib import Path
+
+rule_path, *capture_paths = map(Path, sys.argv[1:])
+rule = rule_path.read_text()
+front = re.search(r"^version:\s*(\d+\.\d+\.\d+)\s*$", rule, re.M)
+comment = re.search(r"teamshared-rule-version:\s*(\d+\.\d+\.\d+)", rule)
+if not front or not comment:
+    print("FAIL  rules/teamshared.mdc must declare frontmatter + HTML comment versions")
+    sys.exit(1)
+if front.group(1) != comment.group(1):
+    print(
+        f"FAIL  rules/teamshared.mdc frontmatter {front.group(1)} "
+        f"!= comment {comment.group(1)}"
+    )
+    sys.exit(1)
+rule_version = front.group(1)
+if rule_version != "1.27.0":
+    print(f"FAIL  rules/teamshared.mdc must be protocol 1.27.0, got {rule_version}")
+    sys.exit(1)
+if "two Cursor hooks" in rule:
+    print("FAIL  rules/teamshared.mdc must not copy the 1.26.0 two-hooks paragraph")
+    sys.exit(1)
+for needle in (
+    "memory_changes_since",
+    "degraded: true",
+    "errors_by_pillar",
+    "sessionStart",
+    "beforeSubmitPrompt",
+    "afterAgentResponse",
+    "sessionEnd",
+    "postToolUse",
+    "preCompact",
+):
+    if needle not in rule:
+        print(f"FAIL  rules/teamshared.mdc must mention {needle!r}")
+        sys.exit(1)
+print(f"ok  rules/teamshared.mdc  protocol {rule_version} + capture hooks")
+
+const_re = re.compile(r'^PROTOCOL_VERSION\s*=\s*"(\d+\.\d+\.\d+)"\s*$', re.M)
+for path in capture_paths:
+    text = path.read_text()
+    match = const_re.search(text)
+    if not match:
+        print(f"FAIL  {path} must define PROTOCOL_VERSION")
+        sys.exit(1)
+    if match.group(1) != rule_version:
+        print(
+            f"FAIL  {path} PROTOCOL_VERSION {match.group(1)} "
+            f"!= rules/teamshared.mdc {rule_version}"
+        )
+        sys.exit(1)
+    print(f"ok  PROTOCOL_VERSION  {path} == {rule_version}")
+PY
+else
+  echo "skip protocol drift check (python3 not found)"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

@@ -19,7 +19,8 @@ from pathlib import Path
 from typing import Any
 
 MCP_URL = "https://teamshared.com/mcp"
-PLUGIN_VERSION = "0.11.0"
+PLUGIN_VERSION = "0.13.0"
+PROTOCOL_VERSION = "1.27.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900

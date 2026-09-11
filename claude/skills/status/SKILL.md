@@ -10,7 +10,7 @@ print `TEAMSHARED_TOKEN` or any secret.
 
 1. Call `health`. If it fails, say MCP is unreachable and stop. Do not probe
    `TEAMSHARED_*` in the shell.
-2. Call `version` with `installed_rule_version` `1.24.0`. Report
+2. Call `version` with `installed_rule_version` `1.27.0`. Report
    `update_available` exactly. Never invent a version. If an update is
    available, offer to write `rule_markdown` to `~/.claude/rules/teamshared.md`
    (or `.claude/rules/teamshared.md`).

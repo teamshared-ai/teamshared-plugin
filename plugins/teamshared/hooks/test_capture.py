@@ -234,7 +234,8 @@ class TurnCaptureTests(unittest.TestCase):
                         )
         output = extra["hookSpecificOutput"]
         self.assertEqual(output["hookEventName"], "SessionStart")
-        self.assertIn("1.24.0", output["additionalContext"])
+        self.assertIn("1.27.0", output["additionalContext"])
+        self.assertIn("memory_changes_since", output["additionalContext"])
         self.assertIn("memory_session_ensure", output["additionalContext"])
         self.assertIn("work_id", output["additionalContext"])
         self.assertIn("OAuth", output["additionalContext"])
@@ -436,7 +437,9 @@ class HooksManifestTests(unittest.TestCase):
             self.assertTrue((HERE / script).is_file(), script)
         self.assertFalse((HERE / "stop_failure.py").exists())
         self.assertFalse((HERE / "post_tool_use_failure.py").exists())
-        self.assertIn("1.24.0", capture.PROTOCOL_CONTEXT)
+        self.assertEqual(capture.PROTOCOL_VERSION, "1.27.0")
+        self.assertIn("1.27.0", capture.PROTOCOL_CONTEXT)
+        self.assertIn("memory_changes_since", capture.PROTOCOL_CONTEXT)
         self.assertIn("OAuth", capture.PROTOCOL_CONTEXT)
         self.assertLess(len(capture.PROTOCOL_CONTEXT), 10000)
 

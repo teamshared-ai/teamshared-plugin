@@ -8,11 +8,11 @@ TeamShared (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`,
 extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
-(remote MCP + `TEAMSHARED_TOKEN` auth, protocol 1.24.0, SessionStart injection,
+(remote MCP + `TEAMSHARED_TOKEN` auth, protocol 1.27.0, SessionStart injection,
 and official Claude Code capture hooks). Claude Code does not inherit Cursor Connect.
 
 The native **Codex** package under `plugins/teamshared/` uses the server's MCP
-OAuth discovery flow and treats Codex as a first-class client: protocol 1.24.0,
+OAuth discovery flow and treats Codex as a first-class client: protocol 1.27.0,
 SessionStart injection, and official Codex capture hooks. A manual Codex TOML
 setup remains available under `install/codex/` (`TEAMSHARED_TOKEN`; do not mix).
 
@@ -24,10 +24,10 @@ and is hosted at [teamshared.com](https://teamshared.com).
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
 | `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell) and `preCompact` |
-| `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN` + protocol 1.24.0 + capture hooks) |
+| `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN` + protocol 1.27.0 + capture hooks) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
-| `plugins/teamshared/` | Native Codex plugin (OAuth MCP + protocol 1.24.0 + official capture hooks) |
+| `plugins/teamshared/` | Native Codex plugin (OAuth MCP + protocol 1.27.0 + official capture hooks) |
 | `clients/` | Copy-paste protocol + MCP examples for non-Cursor harnesses (not loaded by Cursor) |
 
 ## Install
@@ -64,7 +64,7 @@ export TEAMSHARED_TOKEN=tsk_...   # mint under https://teamshared.com/app/keys
 The Claude package registers `https://teamshared.com/mcp` with
 `Authorization: Bearer ${TEAMSHARED_TOKEN}` (same placeholder idea as
 `install/claude/mcp.json`). Confirm tools appear under `/mcp` as
-`plugin:teamshared:teamshared`. `SessionStart` injects protocol 1.24.0;
+`plugin:teamshared:teamshared`. `SessionStart` injects protocol 1.27.0;
 `/teamshared:status` checks health + version. Details:
 [`claude/README.md`](claude/README.md).
 
@@ -80,7 +80,7 @@ codex plugin add teamshared@teamshared
 
 Restart the Codex app, start a new task, and connect TeamShared when prompted.
 Then review and trust plugin hooks with `/hooks` so capture writes run.
-`SessionStart` injects protocol 1.24.0; `$status` checks health + version.
+`SessionStart` injects protocol 1.27.0; `$status` checks health + version.
 The package lives under [`plugins/teamshared/`](plugins/teamshared/) and is
 cataloged by [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
 Details: [`plugins/teamshared/README.md`](plugins/teamshared/README.md).
@@ -166,9 +166,9 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   transcript.
 
 The Cursor plugin still has no skills, slash commands, or extra agents.
-The Claude Code package ships protocol **1.24.0** (`teamshared-memory`),
+The Claude Code package ships protocol **1.27.0** (`teamshared-memory`),
 `/teamshared:status`, and official Claude Code capture hooks. The Codex
-package ships the same 1.24.0 loop plus official Codex hooks (`SessionStart`,
+package ships the same 1.27.0 loop plus official Codex hooks (`SessionStart`,
 `UserPromptSubmit`, `Stop`, `SessionEnd`, `PostToolUse` on failed `Bash`,
 `PreCompact`). Codex has no `StopFailure` or `PostToolUseFailure`.
 
