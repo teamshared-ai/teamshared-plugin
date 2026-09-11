@@ -358,18 +358,17 @@ if claude_server.get("type") not in ("http", "streamable-http"):
         f"got {claude_server.get('type')!r}"
     )
     sys.exit(1)
-auth = ((claude_server.get("headers") or {}).get("Authorization") or "")
-if auth != "Bearer ${TEAMSHARED_TOKEN}":
+if claude_server.get("headers"):
     print(
-        "FAIL  Claude .mcp.json Authorization must be "
-        "'Bearer ${TEAMSHARED_TOKEN}', "
-        f"got {auth!r}"
+        "FAIL  Claude .mcp.json must not include headers "
+        "(Claude Code's native /mcp OAuth flow handles auth), "
+        f"got {claude_server.get('headers')!r}"
     )
     sys.exit(1)
 if re.search(r"tsk_[A-Za-z0-9]", json.dumps(claude_mcp)):
     print("FAIL  Claude .mcp.json must not contain a real tsk_ secret")
     sys.exit(1)
-print("ok  Claude .mcp.json  remote MCP + TEAMSHARED_TOKEN")
+print("ok  Claude .mcp.json  remote MCP + OAuth (no headers)")
 
 with open(claude_hooks_path) as f:
     claude_hooks = json.load(f)
@@ -745,17 +744,20 @@ if ! grep -q '/plugin marketplace add teamshared-ai/teamshared-plugin' "$ROOT/RE
 elif ! grep -q '/plugin install teamshared@teamshared' "$ROOT/README.md"; then
   echo "FAIL  README.md must document /plugin install teamshared@teamshared"
   FAIL=1
-elif ! grep -q 'TEAMSHARED_TOKEN' "$ROOT/README.md" || ! grep -q 'TEAMSHARED_TOKEN' "$ROOT/claude/.mcp.json"; then
-  echo "FAIL  README.md and claude/.mcp.json must document TEAMSHARED_TOKEN"
+elif ! grep -q '/mcp' "$ROOT/README.md" || ! grep -Eqi 'Authenticate' "$ROOT/README.md"; then
+  echo "FAIL  README.md must document the /mcp OAuth Authenticate step for Claude Code"
   FAIL=1
-elif ! grep -q 'does not inherit Cursor Connect' "$ROOT/README.md"; then
-  echo "FAIL  README.md must say Claude Code does not inherit Cursor Connect"
+elif ! grep -q 'TEAMSHARED_TOKEN' "$ROOT/README.md"; then
+  echo "FAIL  README.md must document TEAMSHARED_TOKEN (needed for the capture hooks)"
+  FAIL=1
+elif grep -q 'does not inherit Cursor Connect' "$ROOT/README.md"; then
+  echo "FAIL  README.md must not claim Claude Code has no OAuth-equivalent login (it has its own native /mcp flow)"
   FAIL=1
 elif ! grep -q 'SessionStart' "$ROOT/README.md" || ! grep -q '/teamshared:status' "$ROOT/README.md"; then
   echo "FAIL  README.md must document Claude SessionStart and /teamshared:status"
   FAIL=1
 else
-  echo "ok  docs  Claude Code marketplace + TEAMSHARED_TOKEN"
+  echo "ok  docs  Claude Code marketplace + OAuth + TEAMSHARED_TOKEN for hooks"
 fi
 
 if ! grep -q 'SessionStart' "$ROOT/claude/README.md" \

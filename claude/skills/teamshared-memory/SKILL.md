@@ -9,17 +9,26 @@ description: Recall-first TeamShared memory protocol 1.27.0 for Claude Code. Use
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
-intentionally override it or narrow a read filter. Claude Code does **not**
-inherit Cursor Connect. Authenticate with a `tsk_` bearer from
-`TEAMSHARED_TOKEN` (`Authorization: Bearer tsk_…`). Do not call `mcp_auth` as
-the first hop — it is a last-resort fallback after initialize when the host
-has no token. Mint keys at https://teamshared.com/app/keys. Never store the
-token. Point humans at the console (`/app`) for sign-in, wiki, people, and keys.
+intentionally override it or narrow a read filter. The MCP connection itself
+uses Claude Code's own native OAuth flow — point the user at **`/mcp` →
+teamshared → Authenticate** if it shows as needing authentication; that opens
+a browser to the same email/OTP login as the web console and stores the token
+for you. Never try to do this yourself. Do not call `mcp_auth` as the first
+hop — it is a last-resort fallback after initialize when the host has no
+token and `/mcp` isn't available.
+
+The chat-capture **hooks** (below) are a separate subprocess with no access
+to that OAuth token, so they authenticate independently with a `tsk_` bearer
+from `TEAMSHARED_TOKEN` (`Authorization: Bearer tsk_…`), minted at
+https://teamshared.com/app/keys. They're optional — unset, they simply don't
+capture anything, and the MCP connection and every-turn workflow are
+unaffected. Never store or print the token. Point humans at the console
+(`/app`) for sign-in, wiki, people, and keys.
 
 This skill is protocol **1.27.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Claude Code
-(token auth, Claude write path, Claude hooks). SessionStart also injects the
-every-turn loop.
+(OAuth MCP connection, `TEAMSHARED_TOKEN` hooks, Claude write path). SessionStart
+also injects the every-turn loop.
 
 Unsure which tool? Call `memory_tools_catalog(need="<intent>")` — do not scan
 every MCP descriptor, and do not call `scope="memory", tier="core"` as the only
