@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Structural checks for the Cursor plugin (MCP + recall rule + chat-capture hooks),
 # Claude Code marketplace package (MCP + 1.24 skill + official capture hooks),
-# and native Codex marketplace package.
+# and native Codex marketplace package (OAuth MCP + 1.24 skill + official capture hooks).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -74,6 +74,18 @@ check "$ROOT/plugins/teamshared/.mcp.json"
 check "$ROOT/plugins/teamshared/README.md"
 check "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md"
 check "$ROOT/plugins/teamshared/skills/teamshared-memory/agents/openai.yaml"
+check "$ROOT/plugins/teamshared/skills/status/SKILL.md"
+check "$ROOT/plugins/teamshared/hooks/hooks.json"
+check "$ROOT/plugins/teamshared/hooks/capture.py"
+check "$ROOT/plugins/teamshared/hooks/session_start.py"
+check "$ROOT/plugins/teamshared/hooks/user_prompt_submit.py"
+check "$ROOT/plugins/teamshared/hooks/stop.py"
+check "$ROOT/plugins/teamshared/hooks/session_end.py"
+check "$ROOT/plugins/teamshared/hooks/post_tool_use.py"
+check "$ROOT/plugins/teamshared/hooks/pre_compact.py"
+check "$ROOT/plugins/teamshared/hooks/test_capture.py"
+absent "$ROOT/plugins/teamshared/hooks/stop_failure.py"
+absent "$ROOT/plugins/teamshared/hooks/post_tool_use_failure.py"
 absent "$ROOT/skills"
 absent "$ROOT/agents"
 absent "$ROOT/commands"
@@ -432,11 +444,20 @@ print("ok  Claude teamshared-memory 1.24.0 + status skill")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
-  python3 - <<'PY' "$ROOT/.agents/plugins/marketplace.json" "$ROOT/plugins/teamshared/.codex-plugin/plugin.json" "$ROOT/plugins/teamshared/.mcp.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md" "$ROOT/.cursor-plugin/plugin.json"
+  python3 "$ROOT/plugins/teamshared/hooks/test_capture.py" -q
+  python3 - <<'PY' "$ROOT/.agents/plugins/marketplace.json" "$ROOT/plugins/teamshared/.codex-plugin/plugin.json" "$ROOT/plugins/teamshared/.mcp.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md" "$ROOT/plugins/teamshared/skills/status/SKILL.md" "$ROOT/plugins/teamshared/hooks/hooks.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/agents/openai.yaml"
 import json, re, sys
 from pathlib import Path
 
-market_path, plugin_path, mcp_path, skill_path, cursor_plugin_path = map(Path, sys.argv[1:])
+(
+    market_path,
+    plugin_path,
+    mcp_path,
+    skill_path,
+    status_path,
+    hooks_path,
+    openai_yaml_path,
+) = map(Path, sys.argv[1:])
 
 with market_path.open() as f:
     market = json.load(f)
@@ -465,14 +486,12 @@ print("ok  Codex marketplace  teamshared@teamshared source ./plugins/teamshared"
 
 with plugin_path.open() as f:
     plugin = json.load(f)
-with cursor_plugin_path.open() as f:
-    cursor_plugin = json.load(f)
 print(f"ok  JSON  {plugin_path}")
 if plugin.get("name") != "teamshared":
     print(f"FAIL  Codex plugin name, got {plugin.get('name')!r}")
     sys.exit(1)
-if plugin.get("version") != cursor_plugin.get("version"):
-    print("FAIL  Codex plugin version must match Cursor plugin version")
+if not re.match(r"^\d+\.\d+\.\d+$", str(plugin.get("version") or "")):
+    print(f"FAIL  Codex plugin version must be semver, got {plugin.get('version')!r}")
     sys.exit(1)
 if (plugin.get("author") or {}).get("name") != "Loreum Labs Ltd":
     print("FAIL  Codex plugin author.name must be 'Loreum Labs Ltd'")
@@ -480,12 +499,26 @@ if (plugin.get("author") or {}).get("name") != "Loreum Labs Ltd":
 if plugin.get("skills") != "./skills/" or plugin.get("mcpServers") != "./.mcp.json":
     print("FAIL  Codex plugin must declare ./skills/ and ./.mcp.json")
     sys.exit(1)
+if plugin.get("hooks") != "./hooks/hooks.json":
+    print(
+        "FAIL  Codex plugin.json hooks must be './hooks/hooks.json', "
+        f"got {plugin.get('hooks')!r}"
+    )
+    sys.exit(1)
 interface = plugin.get("interface") or {}
 for field in ("displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt"):
     if field not in interface:
         print(f"FAIL  Codex plugin interface missing {field}")
         sys.exit(1)
-print("ok  Codex plugin.json  MCP + teamshared-memory skill")
+prompts = interface.get("defaultPrompt") or []
+if not isinstance(prompts, list) or not 1 <= len(prompts) <= 3:
+    print("FAIL  Codex defaultPrompt must be 1-3 starter strings")
+    sys.exit(1)
+for prompt in prompts:
+    if not isinstance(prompt, str) or len(prompt) > 128:
+        print(f"FAIL  Codex defaultPrompt entry exceeds 128 chars: {prompt!r}")
+        sys.exit(1)
+print("ok  Codex plugin.json  MCP + skill + official hooks")
 
 with mcp_path.open() as f:
     mcp = json.load(f)
@@ -497,22 +530,100 @@ server = (mcp.get("mcpServers") or {}).get("teamshared") or {}
 if server != {"type": "streamable-http", "url": "https://teamshared.com/mcp"}:
     print(f"FAIL  Codex MCP config, got {server!r}")
     sys.exit(1)
+if server.get("headers"):
+    print("FAIL  Codex .mcp.json must not include headers (OAuth discovery)")
+    sys.exit(1)
 if re.search(r"tsk_[A-Za-z0-9]", json.dumps(mcp)):
     print("FAIL  Codex .mcp.json must not contain a tsk_ secret")
     sys.exit(1)
 print("ok  Codex .mcp.json  OAuth-discovered streamable HTTP")
 
-skill = skill_path.read_text()
-if "name: teamshared-memory" not in skill or "description:" not in skill:
-    print("FAIL  Codex skill frontmatter is incomplete")
+with hooks_path.open() as f:
+    hooks = json.load(f)
+print(f"ok  JSON  {hooks_path}")
+events = hooks.get("hooks") or {}
+required = {
+    "SessionStart",
+    "UserPromptSubmit",
+    "Stop",
+    "SessionEnd",
+    "PostToolUse",
+    "PreCompact",
+}
+if set(events) != required:
+    print(f"FAIL  Codex hooks.json must register {sorted(required)}, got {sorted(events)}")
     sys.exit(1)
+forbidden = {
+    "StopFailure",
+    "PostToolUseFailure",
+    "sessionStart",
+    "beforeSubmitPrompt",
+    "afterAgentResponse",
+    "postToolUse",
+    "preCompact",
+}
+if set(events) & forbidden:
+    print(f"FAIL  Codex hooks.json includes unsupported events {sorted(set(events) & forbidden)}")
+    sys.exit(1)
+for name in required:
+    group = events.get(name) or []
+    handlers = (group[0].get("hooks") or []) if group else []
+    command = handlers[0].get("command") if handlers else None
+    if not command or "python3" not in command or "${PLUGIN_ROOT}/hooks/" not in command:
+        print(f"FAIL  Codex hooks.json {name} must be python3 ${{PLUGIN_ROOT}}/hooks/...")
+        sys.exit(1)
+matcher = events["PostToolUse"][0].get("matcher")
+if matcher != "Bash":
+    print(f"FAIL  Codex PostToolUse matcher must be Bash, got {matcher!r}")
+    sys.exit(1)
+session_end_timeout = (events["SessionEnd"][0].get("hooks") or [{}])[0].get("timeout")
+if not isinstance(session_end_timeout, (int, float)) or session_end_timeout > 3:
+    print(f"FAIL  Codex SessionEnd timeout must be <= 3s, got {session_end_timeout!r}")
+    sys.exit(1)
+if "tsk_" in json.dumps(hooks):
+    print("FAIL  Codex hooks.json must not contain a tsk_ key")
+    sys.exit(1)
+print("ok  Codex hooks  official events + capture")
+
+skill = skill_path.read_text()
+status = status_path.read_text()
+openai_yaml = openai_yaml_path.read_text()
+for needle in (
+    "1.24.0",
+    "work_id",
+    "playbook_slug",
+    "soul",
+    "agent_memory",
+    "memory_playbook_get",
+    "memory_skill_get",
+    "memory_entity_view",
+    "installed_rule_version",
+    "~/.codex/AGENTS.md",
+    "SessionStart",
+    "UserPromptSubmit",
+    "StopFailure",
+    "PostToolUseFailure",
+    "OAuth",
+):
+    if needle not in skill:
+        print(f"FAIL  Codex teamshared-memory skill must mention {needle!r}")
+        sys.exit(1)
 if "[TODO:" in skill or "## Every turn" not in skill:
     print("FAIL  Codex skill must be complete and include the every-turn workflow")
     sys.exit(1)
-if re.search(r"tsk_[A-Za-z0-9]", skill):
-    print("FAIL  Codex skill must not contain a tsk_ secret")
+if "even when the user does not name TeamShared" not in skill:
+    print("FAIL  Codex skill description must trigger without the user naming TeamShared")
     sys.exit(1)
-print("ok  Codex teamshared-memory skill")
+if re.search(r"tsk_[A-Za-z0-9]", skill) or re.search(r"tsk_[A-Za-z0-9]", status):
+    print("FAIL  Codex skills must not contain a tsk_ secret")
+    sys.exit(1)
+if "name: status" not in status or "health" not in status:
+    print("FAIL  Codex $status skill is incomplete")
+    sys.exit(1)
+if "allow_implicit_invocation: true" not in openai_yaml:
+    print("FAIL  Codex openai.yaml must allow implicit skill invocation")
+    sys.exit(1)
+print("ok  Codex teamshared-memory 1.24.0 + status skill")
 PY
 else
   echo "skip JSON parse (python3 not found)"
@@ -549,6 +660,23 @@ if ! grep -q "codex plugin marketplace add teamshared-ai/teamshared-plugin" "$RO
   FAIL=1
 else
   echo "ok  docs  native Codex marketplace + OAuth"
+fi
+
+if ! grep -q "SessionStart" "$ROOT/README.md" \
+  || ! grep -q "StopFailure" "$ROOT/README.md" \
+  || ! grep -q "PostToolUseFailure" "$ROOT/README.md" \
+  || ! grep -q "SessionStart" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "UserPromptSubmit" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "PostToolUse" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "StopFailure" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "keyring" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "/hooks" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "1.24.0" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q '~/.codex/AGENTS.md' "$ROOT/plugins/teamshared/README.md"; then
+  echo "FAIL  README files must document Codex SessionStart, capture vs Claude, /hooks trust, and AGENTS.md"
+  FAIL=1
+else
+  echo "ok  docs  Codex SessionStart + capture gaps vs Claude"
 fi
 
 if ! grep -q "install/codex/README.md" "$ROOT/clients/README.md"; then

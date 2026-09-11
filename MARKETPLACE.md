@@ -13,6 +13,10 @@ Claude Code installs from the same GitHub URL via
 `claude/`: MCP + protocol 1.24.0 + official Claude Code capture hooks).
 Official Anthropic marketplace submit is out of scope.
 
+Codex installs from `.agents/plugins/marketplace.json` (package under
+`plugins/teamshared/`: OAuth MCP + protocol 1.24.0 + official Codex capture
+hooks). Keep that OAuth path separate from `install/codex/` (`tsk_`).
+
 ## Install (team / git marketplace)
 
 1. In Cursor: **Settings → Plugins → Add marketplace**
@@ -133,6 +137,23 @@ Code does not inherit Cursor Connect. Never commit the key. After install,
 `/reload-plugins`, confirm `/mcp`, then `/teamshared:status`. See
 [`claude/README.md`](claude/README.md).
 
+## Codex marketplace
+
+Users add this repo as a Codex marketplace (catalog at
+`.agents/plugins/marketplace.json`), then install the `plugins/teamshared/`
+package:
+
+```bash
+codex plugin marketplace add teamshared-ai/teamshared-plugin
+codex plugin add teamshared@teamshared
+```
+
+Auth is MCP OAuth discovery (no token in `.mcp.json`). After install, connect
+when prompted, trust hooks with `/hooks`, then `$status`. Codex has no
+`StopFailure` or `PostToolUseFailure`. See
+[`plugins/teamshared/README.md`](plugins/teamshared/README.md). Do not also
+install [`install/codex/`](install/codex/README.md).
+
 ## Repo layout
 
 ```
@@ -149,7 +170,10 @@ teamshared-plugin/
 ├── rules/teamshared.mdc
 ├── hooks/                 # Agent Chat capture + postToolUse + preCompact (Cursor)
 ├── clients/               # protocol + manual MCP examples for other harnesses
-├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env)
+├── .agents/plugins/
+│   └── marketplace.json   # Codex catalog: source ./plugins/teamshared
+├── plugins/teamshared/    # Codex plugin (OAuth MCP + 1.24 protocol + capture hooks)
+├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env; do not mix)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg
 ├── README.md
