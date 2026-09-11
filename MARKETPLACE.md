@@ -9,8 +9,9 @@ capture Agent Chat (`sessionStart`, `beforeSubmitPrompt`,
 `preCompact`. Still no skills, agents, or commands.
 
 Claude Code installs from the same GitHub URL via
-`.claude-plugin/marketplace.json` (separate package under `claude/`; no
-Cursor hooks). Official Anthropic marketplace submit is out of scope.
+`.claude-plugin/marketplace.json` (separate first-class package under
+`claude/`: MCP + protocol 1.24.0 + official Claude Code capture hooks).
+Official Anthropic marketplace submit is out of scope.
 
 ## Install (team / git marketplace)
 
@@ -128,7 +129,8 @@ Users add this repo as a Claude Code marketplace (catalog at
 ```
 
 Auth is `TEAMSHARED_TOKEN` (`tsk_…` bearer on the MCP headers). Claude
-Code does not inherit Cursor Connect. Never commit the key. See
+Code does not inherit Cursor Connect. Never commit the key. After install,
+`/reload-plugins`, confirm `/mcp`, then `/teamshared:status`. See
 [`claude/README.md`](claude/README.md).
 
 ## Repo layout
@@ -140,7 +142,7 @@ teamshared-plugin/
 │   └── plugin.json
 ├── .claude-plugin/
 │   └── marketplace.json   # Claude Code catalog: source ./claude
-├── claude/                # Claude Code plugin (MCP + TEAMSHARED_TOKEN; no Cursor hooks)
+├── claude/                # Claude Code plugin (MCP + 1.24 protocol + capture hooks)
 ├── plugin.json            # Agent Plugins 1.0.0 / cursor.directory discovery
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)

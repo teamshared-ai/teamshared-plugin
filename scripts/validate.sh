@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Structural checks for the Cursor plugin (MCP + recall rule + chat-capture hooks),
-# Claude Code marketplace package, and native Codex marketplace package.
+# Claude Code marketplace package (MCP + 1.24 skill + official capture hooks),
+# and native Codex marketplace package.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -56,6 +57,17 @@ check "$ROOT/claude/.claude-plugin/plugin.json"
 check "$ROOT/claude/.mcp.json"
 check "$ROOT/claude/README.md"
 check "$ROOT/claude/skills/teamshared-memory/SKILL.md"
+check "$ROOT/claude/skills/status/SKILL.md"
+check "$ROOT/claude/hooks/hooks.json"
+check "$ROOT/claude/hooks/capture.py"
+check "$ROOT/claude/hooks/session_start.py"
+check "$ROOT/claude/hooks/user_prompt_submit.py"
+check "$ROOT/claude/hooks/stop.py"
+check "$ROOT/claude/hooks/stop_failure.py"
+check "$ROOT/claude/hooks/session_end.py"
+check "$ROOT/claude/hooks/post_tool_use_failure.py"
+check "$ROOT/claude/hooks/pre_compact.py"
+check "$ROOT/claude/hooks/test_capture.py"
 check "$ROOT/.agents/plugins/marketplace.json"
 check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
 check "$ROOT/plugins/teamshared/.mcp.json"
@@ -65,12 +77,11 @@ check "$ROOT/plugins/teamshared/skills/teamshared-memory/agents/openai.yaml"
 absent "$ROOT/skills"
 absent "$ROOT/agents"
 absent "$ROOT/commands"
-absent "$ROOT/claude/hooks"
 absent "$ROOT/claude/agents"
 absent "$ROOT/claude/commands"
 
 if command -v python3 >/dev/null 2>&1; then
-  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json" "$ROOT/hooks/hooks.json" "$ROOT/.claude-plugin/marketplace.json" "$ROOT/claude/.claude-plugin/plugin.json" "$ROOT/claude/.mcp.json"
+  python3 - <<'PY' "$ROOT/.cursor-plugin/plugin.json" "$ROOT/.cursor-plugin/marketplace.json" "$ROOT/mcp.json" "$ROOT/plugin.json" "$ROOT/.mcp.json" "$ROOT/hooks/hooks.json" "$ROOT/.claude-plugin/marketplace.json" "$ROOT/claude/.claude-plugin/plugin.json" "$ROOT/claude/.mcp.json" "$ROOT/claude/hooks/hooks.json" "$ROOT/claude/skills/teamshared-memory/SKILL.md" "$ROOT/claude/skills/status/SKILL.md"
 import json, re, sys
 
 kebab = re.compile(r"^[a-z0-9][a-z0-9.-]*[a-z0-9]$")
@@ -84,6 +95,9 @@ kebab = re.compile(r"^[a-z0-9][a-z0-9.-]*[a-z0-9]$")
     claude_market_path,
     claude_plugin_path,
     claude_mcp_path,
+    claude_hooks_path,
+    claude_skill_path,
+    claude_status_path,
 ) = sys.argv[1:]
 
 with open(plugin_path) as f:
@@ -305,13 +319,16 @@ if claude_plugin.get("mcpServers") != "./.mcp.json":
         f"got {claude_plugin.get('mcpServers')!r}"
     )
     sys.exit(1)
-if claude_plugin.get("hooks"):
-    print("FAIL  Claude plugin.json must not declare hooks")
+if claude_plugin.get("hooks") != "./hooks/hooks.json":
+    print(
+        "FAIL  Claude plugin.json hooks must be './hooks/hooks.json', "
+        f"got {claude_plugin.get('hooks')!r}"
+    )
     sys.exit(1)
 if (claude_plugin.get("author") or {}).get("name") != author_name:
     print("FAIL  Claude plugin.json author.name must match Cursor author.name")
     sys.exit(1)
-print("ok  Claude plugin.json  no hooks")
+print("ok  Claude plugin.json  MCP + hooks")
 
 with open(claude_mcp_path) as f:
     claude_mcp = json.load(f)
@@ -341,8 +358,80 @@ if re.search(r"tsk_[A-Za-z0-9]", json.dumps(claude_mcp)):
     print("FAIL  Claude .mcp.json must not contain a real tsk_ secret")
     sys.exit(1)
 print("ok  Claude .mcp.json  remote MCP + TEAMSHARED_TOKEN")
+
+with open(claude_hooks_path) as f:
+    claude_hooks = json.load(f)
+print(f"ok  JSON  {claude_hooks_path}")
+claude_events = claude_hooks.get("hooks") or {}
+claude_required = {
+    "SessionStart",
+    "UserPromptSubmit",
+    "Stop",
+    "StopFailure",
+    "SessionEnd",
+    "PostToolUseFailure",
+    "PreCompact",
+}
+if set(claude_events) != claude_required:
+    print(
+        f"FAIL  Claude hooks.json must register {sorted(claude_required)}, "
+        f"got {sorted(claude_events)}"
+    )
+    sys.exit(1)
+for name in claude_required:
+    group = claude_events.get(name) or []
+    handlers = (group[0].get("hooks") or []) if group else []
+    command = handlers[0].get("command") if handlers else None
+    args = handlers[0].get("args") if handlers else None
+    if command != "python3" or not args:
+        print(f"FAIL  Claude hooks.json {name} must be python3 + args")
+        sys.exit(1)
+    if "${CLAUDE_PLUGIN_ROOT}/hooks/" not in args[0]:
+        print(f"FAIL  Claude hooks.json {name} args must use CLAUDE_PLUGIN_ROOT")
+        sys.exit(1)
+matcher = claude_events["PostToolUseFailure"][0].get("matcher")
+if matcher != "Bash|PowerShell":
+    print(f"FAIL  PostToolUseFailure matcher must be Bash|PowerShell, got {matcher!r}")
+    sys.exit(1)
+if "tsk_" in json.dumps(claude_hooks):
+    print("FAIL  Claude hooks.json must not contain a tsk_ key")
+    sys.exit(1)
+print("ok  Claude hooks  official events + capture")
+
+from pathlib import Path
+skill = Path(claude_skill_path).read_text()
+status = Path(claude_status_path).read_text()
+for needle in (
+    "1.24.0",
+    "work_id",
+    "playbook_slug",
+    "soul",
+    "agent_memory",
+    "memory_playbook_get",
+    "memory_skill_get",
+    "memory_entity_view",
+    "installed_rule_version",
+    "~/.claude/rules/teamshared.md",
+    "TEAMSHARED_TOKEN",
+    "SessionStart",
+    "UserPromptSubmit",
+):
+    if needle not in skill:
+        print(f"FAIL  Claude teamshared-memory skill must mention {needle!r}")
+        sys.exit(1)
+if "[TODO:" in skill or "## Every turn" not in skill:
+    print("FAIL  Claude skill must be complete and include the every-turn workflow")
+    sys.exit(1)
+if re.search(r"tsk_[A-Za-z0-9]", skill) or re.search(r"tsk_[A-Za-z0-9]", status):
+    print("FAIL  Claude skills must not contain a tsk_ secret")
+    sys.exit(1)
+if "name: status" not in status or "health" not in status:
+    print("FAIL  Claude /teamshared:status skill is incomplete")
+    sys.exit(1)
+print("ok  Claude teamshared-memory 1.24.0 + status skill")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
+  python3 "$ROOT/claude/hooks/test_capture.py" -q
   python3 - <<'PY' "$ROOT/.agents/plugins/marketplace.json" "$ROOT/plugins/teamshared/.codex-plugin/plugin.json" "$ROOT/plugins/teamshared/.mcp.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md" "$ROOT/.cursor-plugin/plugin.json"
 import json, re, sys
 from pathlib import Path
@@ -524,8 +613,23 @@ elif ! grep -q 'TEAMSHARED_TOKEN' "$ROOT/README.md" || ! grep -q 'TEAMSHARED_TOK
 elif ! grep -q 'does not inherit Cursor Connect' "$ROOT/README.md"; then
   echo "FAIL  README.md must say Claude Code does not inherit Cursor Connect"
   FAIL=1
+elif ! grep -q 'SessionStart' "$ROOT/README.md" || ! grep -q '/teamshared:status' "$ROOT/README.md"; then
+  echo "FAIL  README.md must document Claude SessionStart and /teamshared:status"
+  FAIL=1
 else
   echo "ok  docs  Claude Code marketplace + TEAMSHARED_TOKEN"
+fi
+
+if ! grep -q 'SessionStart' "$ROOT/claude/README.md" \
+  || ! grep -q 'UserPromptSubmit' "$ROOT/claude/README.md" \
+  || ! grep -q 'PostToolUseFailure' "$ROOT/claude/README.md" \
+  || ! grep -q '1.24.0' "$ROOT/claude/README.md" \
+  || ! grep -q '/teamshared:status' "$ROOT/claude/README.md" \
+  || ! grep -q '~/.claude/rules/teamshared.md' "$ROOT/claude/README.md"; then
+  echo "FAIL  claude/README.md must document official hooks, 1.24.0, status, and the Claude write path"
+  FAIL=1
+else
+  echo "ok  docs  claude/README hooks + 1.24.0"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then
