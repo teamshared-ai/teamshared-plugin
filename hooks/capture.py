@@ -1,8 +1,11 @@
-"""Shared helpers for the two Cursor hooks (postToolUse + preCompact).
+"""Shared helpers for the teamshared postToolUse + preCompact hooks.
 
-Stdlib only. Best-effort: never block the agent loop. Writes go through the
-hosted TeamShared MCP (memory_session_ensure + context_commit) using the
-existing Cursor Connect token when we can find it — not a tsk_ in mcp.json.
+Used by both the Cursor plugin (hooks/hooks.json) and the Claude Code plugin
+(hooks/hooks.claude.json) — same two scripts, wired to each client's own hook
+event names. Stdlib only. Best-effort: never block the agent loop. Writes go
+through the hosted TeamShared MCP (memory_session_ensure + context_commit)
+using the existing Cursor Connect token when we can find it, else an org
+`tsk_` token from the environment — not a tsk_ in mcp.json.
 """
 
 from __future__ import annotations
@@ -57,6 +60,13 @@ _SECRET_RES = [
     ),
 ]
 _URL_USERINFO_RE = re.compile(r"(https?://)([^/@:\s]+):([^@/\s]+)@")
+
+
+def client_label() -> str:
+    """Which plugin invoked this hook, for the stored fact/summary text."""
+    if os.environ.get("CLAUDE_PLUGIN_ROOT"):
+        return "Claude Code"
+    return "Cursor"
 
 
 def clamp(text: str, limit: int) -> str:
@@ -197,7 +207,7 @@ def failed_tool_fact(payload: dict[str, Any]) -> str:
     code = _exit_code(payload)
     exit_bit = f"exit {code}" if code is not None else "failed"
     tail = error_tail(payload)
-    body = f"Cursor postToolUse: `{command}` {exit_bit}."
+    body = f"{client_label()} postToolUse: `{command}` {exit_bit}."
     if tail:
         body = f"{body}\n{tail}"
     return clamp(strip_secrets(body), MAX_FACT_CHARS)
@@ -265,7 +275,7 @@ def precompact_summary(payload: dict[str, Any]) -> str:
     window = payload.get("context_window_size")
     messages = payload.get("message_count")
     first = payload.get("is_first_compaction")
-    parts = [f"Cursor preCompact ({trigger})"]
+    parts = [f"{client_label()} preCompact ({trigger})"]
     if pct is not None:
         parts.append(f"context {pct}%")
     if tokens is not None and window is not None:

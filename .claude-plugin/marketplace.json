@@ -1,0 +1,15 @@
+{
+  "name": "teamshared",
+  "owner": {
+    "name": "Loreum Labs Ltd"
+  },
+  "description": "teamshared — shared agent memory MCP plugin for Claude Code",
+  "version": "0.10.0",
+  "plugins": [
+    {
+      "name": "teamshared",
+      "source": "./",
+      "description": "Shared team memory for Claude Code: hosted MCP with email/OTP auth, the recall-first memory skill, and two hooks (PostToolUse + PreCompact)."
+    }
+  ]
+}

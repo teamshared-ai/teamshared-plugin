@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the two Cursor hooks. No network."""
+"""Unit tests for the shared postToolUse + preCompact hooks. No network."""
 
 from __future__ import annotations
 
@@ -91,6 +91,16 @@ class FailedToolTests(unittest.TestCase):
         self.assertLess(len(fact), len(long_log))
         self.assertTrue(fact.startswith("Cursor postToolUse:"))
 
+    def test_client_label_switches_under_claude_code(self) -> None:
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest -q"},
+            "tool_output": {"exitCode": 1, "stderr": "boom"},
+        }
+        with patch.dict(os.environ, {"CLAUDE_PLUGIN_ROOT": "/plugins/teamshared"}):
+            fact = capture.failed_tool_fact(payload)
+        self.assertTrue(fact.startswith("Claude Code postToolUse:"))
+
 
 class PreCompactTests(unittest.TestCase):
     def test_short_summary(self) -> None:
@@ -166,12 +176,24 @@ class IngestTests(unittest.TestCase):
 
 class HooksManifestTests(unittest.TestCase):
     def test_only_two_cursor_hooks(self) -> None:
-        hooks = json.loads((HERE / "hooks.json").read_text())
+        hooks = json.loads((HERE / "hooks.cursor.json").read_text())
         events = set(hooks["hooks"])
         self.assertEqual(events, {"postToolUse", "preCompact"})
         self.assertEqual(len(hooks["hooks"]["postToolUse"]), 1)
         self.assertEqual(len(hooks["hooks"]["preCompact"]), 1)
         self.assertEqual(hooks["hooks"]["postToolUse"][0]["matcher"], "Shell")
+
+    def test_only_two_claude_code_hooks(self) -> None:
+        hooks = json.loads((HERE / "hooks.claude.json").read_text())
+        events = set(hooks["hooks"])
+        self.assertEqual(events, {"PostToolUse", "PreCompact"})
+        post = hooks["hooks"]["PostToolUse"]
+        precompact = hooks["hooks"]["PreCompact"]
+        self.assertEqual(len(post), 1)
+        self.assertEqual(len(precompact), 1)
+        self.assertEqual(post[0]["matcher"], "Bash")
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}", post[0]["hooks"][0]["command"])
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}", precompact[0]["hooks"][0]["command"])
 
 
 if __name__ == "__main__":

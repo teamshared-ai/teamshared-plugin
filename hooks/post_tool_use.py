@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cursor postToolUse hook — failed test/lint/shell only.
+"""postToolUse hook (Cursor + Claude Code) — failed test/lint/shell only.
 
 Stores a short episodic fact (command + error tail) on the open TeamShared
 session. Secrets stripped. Full transcript is never sent.

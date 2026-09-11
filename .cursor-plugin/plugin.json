@@ -20,6 +20,6 @@
   "category": "developer-tools",
   "tags": ["mcp", "memory", "teamshared"],
   "rules": "./rules/teamshared.mdc",
-  "hooks": "./hooks/hooks.json",
+  "hooks": "./hooks/hooks.cursor.json",
   "mcpServers": "./mcp.json"
 }

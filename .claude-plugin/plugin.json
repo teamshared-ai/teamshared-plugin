@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "teamshared",
+  "displayName": "TeamShared",
+  "version": "0.10.0",
+  "description": "Shared team memory for Claude Code: hosted MCP with email/OTP auth, the recall-first memory skill, and two hooks (PostToolUse + PreCompact).",
+  "author": {
+    "name": "Loreum Labs Ltd"
+  },
+  "homepage": "https://teamshared.com",
+  "repository": "https://github.com/teamshared-ai/teamshared-plugin",
+  "license": "MIT",
+  "keywords": [
+    "teamshared",
+    "mcp",
+    "memory",
+    "agent-memory",
+    "shared-brain"
+  ],
+  "mcpServers": "./mcp.json",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.claude.json"
+}

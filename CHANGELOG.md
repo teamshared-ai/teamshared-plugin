@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- **Claude Code plugin:** added `.claude-plugin/plugin.json` +
+  `.claude-plugin/marketplace.json` alongside the existing `.cursor-plugin/`.
+  Registers the same hosted MCP (`mcp.json`), a `skills/teamshared/SKILL.md`
+  port of the Cursor rule (relevance-triggered — Claude Code has no
+  `alwaysApply`), and the same two hooks wired to Claude Code's
+  `PostToolUse`/`PreCompact` events via a new `hooks/hooks.claude.json`
+  (reuses `hooks/capture.py`, `post_tool_use.py`, `pre_compact.py`
+  unchanged). Install: `/plugin marketplace add teamshared-ai/teamshared-plugin`
+  then `/plugin install teamshared`.
+- **Fix: hooks filename collision.** Renamed `hooks/hooks.json` to
+  `hooks/hooks.cursor.json`. Claude Code's plugin loader merges any
+  `hooks/hooks.json` it finds at the plugin root in *addition* to whatever
+  the manifest's `hooks` field points at, so with both plugins sharing one
+  root, the Cursor-shaped file (lowercase `postToolUse`/`preCompact`) was
+  being merged in and flagged by `claude plugin validate` as "unknown hook
+  event; entry ignored at runtime". Caught by validating the plugin manifest
+  directly (`claude plugin validate .claude-plugin/plugin.json`), not just
+  the marketplace manifest.
+- **Claude Code auth:** primary login is Claude Code's own OAuth flow
+  (`/mcp` → teamshared → Authenticate) — Claude Code auto-detects the server
+  needs auth and stores the token in the system keychain, same UX as Cursor's
+  Connect and confirmed working (`claude mcp list` shows `teamshared … !
+  Needs authentication` for the plugin-registered server before that step).
+  The skill's `authenticate`/`complete_authentication` tool calls are a
+  fallback for non-interactive contexts only.
 - **0.10.0 Cursor hooks:** two hooks only — `postToolUse` (failed
   test/lint/shell → short episodic fact: command + error tail, secrets
   stripped) and `preCompact` (short session summary). Both append through

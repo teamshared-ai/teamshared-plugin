@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cursor preCompact hook — short session summary on the normal ingest path."""
+"""preCompact hook (Cursor + Claude Code) — short session summary on the normal ingest path."""
 
 from __future__ import annotations
 

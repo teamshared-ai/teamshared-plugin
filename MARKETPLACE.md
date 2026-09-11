@@ -1,9 +1,12 @@
 # Marketplace install & publish
 
 How to install **teamshared** from this repo, and how to submit to the
-[Cursor Marketplace](https://cursor.com/marketplace).
+[Cursor Marketplace](https://cursor.com/marketplace). This doc covers the
+**Cursor** plugin (`.cursor-plugin/`) specifically. For the **Claude Code**
+plugin (`.claude-plugin/`) — same MCP server, a skill instead of a rule, same
+two hooks — see [README.md § Install (Claude Code)](README.md#install-claude-code).
 
-The plugin is **MCP + the recall rule + two Cursor hooks**
+The Cursor plugin is **MCP + the recall rule + two Cursor hooks**
 (`postToolUse` and `preCompact`). Still no skills, agents, or commands.
 
 ## Install (team / git marketplace)
@@ -117,11 +120,17 @@ teamshared-plugin/
 ├── .cursor-plugin/
 │   ├── marketplace.json   # git marketplace + folder picker: source ./
 │   └── plugin.json
+├── .claude-plugin/
+│   ├── marketplace.json   # Claude Code: /plugin marketplace add, source ./
+│   └── plugin.json
 ├── plugin.json            # Agent Plugins 1.0.0 / cursor.directory discovery
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
-├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
-├── rules/teamshared.mdc
-├── hooks/                 # postToolUse + preCompact only
+├── mcp.json               # HTTP MCP config shared by Cursor + Claude Code (OAuth, no headers)
+├── rules/teamshared.mdc   # Cursor: alwaysApply rule
+├── skills/teamshared/     # Claude Code: same protocol as a Skill
+├── hooks/                 # postToolUse/PostToolUse + preCompact/PreCompact only
+│   ├── hooks.cursor.json   # Cursor-shaped hook config
+│   └── hooks.claude.json   # Claude Code-shaped hook config
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg
