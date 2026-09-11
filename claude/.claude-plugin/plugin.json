@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "teamshared",
   "displayName": "TeamShared",
-  "version": "0.11.0",
-  "description": "Shared team memory for Claude Code: remote MCP at https://teamshared.com/mcp. Authenticate with a tsk_ key via TEAMSHARED_TOKEN.",
+  "version": "0.12.0",
+  "description": "Shared team memory for Claude Code: remote MCP at https://teamshared.com/mcp, TEAMSHARED_TOKEN auth, recall-first protocol 1.24.0, SessionStart injection, and chat-capture hooks.",
   "author": {
     "name": "Loreum Labs Ltd"
   },
@@ -17,5 +17,6 @@
     "agent-memory",
     "shared-brain"
   ],
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json"
 }

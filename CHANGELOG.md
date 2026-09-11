@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **0.12.0 Claude Code plugin excellence:** `claude/` is first-class TeamShared
+  (protocol **1.24.0**), not a thin MCP wrapper. `SessionStart` injects the
+  recall-first loop via official `additionalContext`. Capture hooks use only
+  documented Claude Code events (`UserPromptSubmit`, `Stop`, `StopFailure`,
+  `SessionEnd`, `PostToolUseFailure` on `Bash|PowerShell`, `PreCompact`) and
+  write through `memory_session_ensure` / `memory_session_append` /
+  `context_commit` / `memory_session_close` with `TEAMSHARED_TOKEN` (fail-open,
+  secret scrub). Skill expanded to 1.24.0 parity (`work_id` / `playbook_slug`,
+  soul / agent_memory / playbook, named gets, Claude write path
+  `~/.claude/rules/teamshared.md`). Slash skill `/teamshared:status`. Cursor
+  package at repo root is unchanged.
 - **0.11.0 Cursor chat-capture hooks:** Agent Chat turns are appended to
   TeamShared in near-real-time without relying on the agent calling
   `memory_session_ensure` / `context_commit`. New hooks: `sessionStart`

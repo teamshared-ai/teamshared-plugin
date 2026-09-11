@@ -8,7 +8,8 @@ TeamShared (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`,
 extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
-(remote MCP + `TEAMSHARED_TOKEN` auth). Claude Code does not inherit Cursor Connect.
+(remote MCP + `TEAMSHARED_TOKEN` auth, protocol 1.24.0, SessionStart injection,
+and official Claude Code capture hooks). Claude Code does not inherit Cursor Connect.
 
 The native **Codex** package under `plugins/teamshared/` uses the server's MCP
 OAuth discovery flow and includes a recall-first `teamshared-memory` skill. A
@@ -22,7 +23,7 @@ and is hosted at [teamshared.com](https://teamshared.com).
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
 | `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell) and `preCompact` |
-| `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN`; no Cursor hooks) |
+| `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN` + protocol 1.24.0 + capture hooks) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `plugins/teamshared/` | Native Codex plugin (OAuth MCP connection + recall-first skill) |
@@ -62,7 +63,9 @@ export TEAMSHARED_TOKEN=tsk_...   # mint under https://teamshared.com/app/keys
 The Claude package registers `https://teamshared.com/mcp` with
 `Authorization: Bearer ${TEAMSHARED_TOKEN}` (same placeholder idea as
 `install/claude/mcp.json`). Confirm tools appear under `/mcp` as
-`plugin:teamshared:teamshared`. Details: [`claude/README.md`](claude/README.md).
+`plugin:teamshared:teamshared`. `SessionStart` injects protocol 1.24.0;
+`/teamshared:status` checks health + version. Details:
+[`claude/README.md`](claude/README.md).
 
 ### Codex (native plugin marketplace)
 
@@ -159,8 +162,9 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   transcript.
 
 The Cursor plugin still has no skills, slash commands, or extra agents.
-The Claude Code and Codex packages each add a thin `teamshared-memory`
-skill.
+The Claude Code package ships protocol **1.24.0** (`teamshared-memory`),
+`/teamshared:status`, and official Claude Code capture hooks. The Codex
+package still adds a thin `teamshared-memory` skill.
 
 ## Other clients
 
