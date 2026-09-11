@@ -1,46 +1,76 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol for Codex. Use on every turn when TeamShared MCP tools are available, and when recalling or storing team memory, past work, preferences, playbooks, projects, or durable repository context.
+description: Recall-first TeamShared memory protocol 1.24.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
-# TeamShared memory for Codex
+# TeamShared memory (Codex)
 
-The `teamshared` MCP server at `https://teamshared.com/mcp` is durable memory
-across tasks and repositories. Authenticate through the plugin's OAuth Connect
-flow. The server publishes MCP OAuth discovery metadata, so this package does
-not store API keys or headers. Never store tokens, credentials, or login codes
-in TeamShared memory.
+<!-- teamshared-rule-version: 1.24.0 -->
 
-For manual Codex TOML setup outside this plugin, follow
-`install/codex/README.md` in the repository and use `TEAMSHARED_TOKEN`.
+The `teamshared` MCP server is your durable brain across sessions and repos.
+Authenticated identity sets write attribution; do not pass `agent` unless you
+intentionally override it or narrow a read filter. This native Codex plugin
+authenticates through **MCP OAuth discovery** (connect when Codex prompts).
+The server publishes OAuth metadata, so `.mcp.json` stores no API keys or
+headers. Do not call `mcp_auth` as the first hop — it is a last-resort
+fallback after initialize when the host has no token. Never store tokens,
+credentials, or login codes in TeamShared memory.
 
-When unsure which tool fits an intent, call
-`memory_tools_catalog(need="<intent>")`.
+The separate `install/codex/` TOML path uses `TEAMSHARED_TOKEN` (`tsk_`
+minted at https://teamshared.com/app/keys). Do **not** install that fallback
+alongside this plugin. Point humans at the console (`/app`) for sign-in,
+wiki, people, and keys.
+
+This skill is protocol **1.24.0** — the same fetch/store loop as
+`rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex
+(OAuth MCP, `AGENTS.md` version notes, official Codex hooks). SessionStart
+also injects the every-turn loop so recall/commit runs without the user
+naming TeamShared.
+
+Unsure which tool? Call `memory_tools_catalog(need="<intent>")` — do not scan
+every MCP descriptor, and do not call `scope="memory", tier="core"` as the only
+discovery path (that hides files and projects).
+
+## Staying current
+
+On the **first turn of a chat** (or when the user asks about teamshared
+versions), call `version` with this skill's protocol version (`1.24.0`) as
+`installed_rule_version`. Do not call `version` every turn. If
+`update_available: true`, tell the user a newer protocol exists and that they
+should upgrade this marketplace plugin. Codex has no Cursor `.mdc` or Claude
+`rules/` auto-apply path — do **not** write Cursor `rule_markdown` into
+`~/.cursor/rules/teamshared.mdc` or `~/.claude/rules/teamshared.md`. You may
+add a short upgrade note to `~/.codex/AGENTS.md` (or the repo `AGENTS.md`)
+and never invent a version.
 
 ## Every turn
 
-1. Call `memory_session_ensure(repo=..., topic=..., fresh=..., user=...)` to
-   recover or rotate the session and append the substantive user request. Use
-   `fresh=true` only on the first turn of a new task or after a clear pivot.
-2. Call `memory_recall(...)` with a short keyword query. Retrieve named
-   playbooks, skills, and entities with `memory_playbook_get`,
-   `memory_skill_get`, and `memory_entity_view` instead of recall.
-3. Do the user's work, grounding the result in relevant memory hits. If recall
-   is empty, say so before relying on current context or general knowledge.
-4. Make `context_commit(summary=..., facts=[...], repo=..., github=...,
-   close=...)` the final TeamShared MCP call. Use `close=true` when the task is
-   complete.
+Run in order:
 
-Do not append tool-call turns for TeamShared calls. If the MCP tools are
-unavailable, continue the user's task without memory and briefly disclose that
-TeamShared could not be used.
+1. **`memory_session_ensure(repo=..., topic=..., fresh=<first turn>, user=<request>)`**
+   — recovers or rotates the session and appends the substantive user request.
+   `fresh=true` only on the first turn of a new chat (or a clear mid-chat pivot).
+   Bound work (named work id, or `agent_run_*` context) → pass `work_id=`; else
+   a named playbook → `playbook_slug=`. Omit both when unbound — never dump the
+   playbook catalog. Adopt non-empty `soul` (private human), `agent_memory`
+   (org-shared Agent), and `playbook` `{name, description, body_md, slug}` from
+   the ensure payload.
+2. **`memory_recall(...)`** for keyword search (architecture, debugging, past
+   work). Named playbook/skill/entity → get-by-name, not recall.
+3. **Do the work.**
+4. **`context_commit(summary=..., facts=[...], repo=..., github=..., close=<done?>)`**
+   — last MCP call of the turn. `close=true` when the task is done or the user
+   says goodbye (queues distillation). Adopt `reopened: true` session ids.
+
+Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
+output, `context_normalize` and reason over the trimmed `output`. Do not
+re-normalize teamshared MCP responses.
 
 ## Fetch
 
-Default recall scope is durable: semantic, episodic, procedural, skill,
-strategic, and work. Use `scope=["working"]` only for the current task's open
-session turns. Start with one to three keywords, then broaden if results are
-thin.
+Always pass `repo=` and `github=` (see **Code scope**). Default scope is durable
+(semantic, episodic, procedural, skill, strategic, work) — **not** working.
+`scope=["working"]` only when you need this chat's open session turns.
 
 ```text
 memory_recall(
@@ -51,17 +81,101 @@ memory_recall(
 )
 ```
 
+1. Short keyword first (`"mex"`, `"Hivemind"`). If thin, broaden. Not a long conversational question.
+2. Named playbook/skill/entity → `memory_playbook_get` / `memory_skill_get` / `memory_entity_view`.
+3. Ground answers in hits; if empty, say so before answering from priors.
+4. Prefer `metadata.matched_keyword: true`. `memory_think` only after hits, or
+   for open strategic questions.
+
 ## Store
 
-| Need | Tool |
-|---|---|
-| Durable fact, preference, event, or note | `context_commit` `facts[]` or `memory_remember` |
-| Atomic how-to | `memory_skill_set` |
-| Composed flow | `memory_playbook_set` |
-| Assignable task | `work_*` |
-| Board or project | `project_*` |
-| Person or organization | `memory_entity_view` and ontology tools |
+**Session (every turn):** `ensure(user=)` captures the request; `context_commit`
+`summary` is a faithful assistant reply — not UI boilerplate. Truncate long
+tool output. Never store secrets, tokens, or credentials.
 
-Resolve `repo` from the workspace root as a slug without slashes. Resolve
-`github` as `owner/repo` when a GitHub remote is available. Never call
-`memory_forget` without the user's explicit request.
+This plugin also ships official Codex hooks
+([hooks reference](https://developers.openai.com/codex/hooks)) that capture
+the chat into TeamShared working memory (fail-open): `SessionStart` injects
+this protocol and maps Codex `session_id` → `memory_session_ensure`;
+`UserPromptSubmit` appends the redacted user prompt; `Stop` appends the
+redacted assistant text (`last_assistant_message`); `SessionEnd` closes and
+distills; `PostToolUse` (matcher `Bash`) writes a short episodic fact when
+the command failed; `PreCompact` writes a short session summary. Codex has
+**no** `StopFailure` or `PostToolUseFailure` events — those remain Claude-only.
+Hooks store the transcript; you still recall first and may `context_commit`
+curated facts. Do not re-append the same user/assistant text in the same turn.
+Plugin hooks stay skipped until the user reviews and trusts them (`/hooks`).
+
+**Durable `facts[]`** (still true next week; one dense paragraph; `subject` +
+tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /
+`github=`.
+
+| Signal | `kind` |
+|---|---|
+| "I prefer / always / never …" | `preference` |
+| Stable repo/org fact | `fact` |
+| One-off event worth logging | `event` |
+| Outreach send (mentions Person + Campaign) | `outreach` |
+| Misc working note | `note` |
+
+Do **not** put skills, playbooks, tasks, or strategic vision in `facts[]` /
+`memory_remember`:
+
+| Want | Tool |
+|---|---|
+| Atomic how-to | `memory_skill_set` |
+| Composed flow (`tool_recipe.skills`) | `memory_playbook_set` |
+| Assignable task / outreach beat | `work_*` (`part_of=` a campaign Project) |
+| Person / campaign CRM | `account_brief` / `memory_entity_view` (`gtm-outreach`) |
+| Another agent's profile | `memory_agent_get` (`slug` / `cursor_agent_id`) |
+| Board / project | `project_*` |
+| Spawn Cursor coding worker | `agent_run_start` (`github=owner/repo`) |
+| Follow / status / cancel cloud agent | `agent_run_followup` / `_status` / `_cancel` |
+| Large local file upload | `file_upload_request` |
+| Other shared files | `file_*` (`work_id=` hangs a file on a task; `project_id=` on a project) |
+| Vision / OKRs | `memory_strategic_*` |
+
+`close=true` distills the session into durable memory.
+
+## Campaign CRM
+
+Use the seeded ontology. Do **not** invent Contact or Deal kinds. Gmail /
+Telegram send skills live on the Grok Bot — do not ingest inbox into
+TeamShared.
+
+| Need | Use |
+|---|---|
+| Contact | `Person` (`memory_ontology_propose_entity`). Properties: email, name, telegram, role, stage |
+| Company | `Organization`. `Person --works_at--> Organization` (`works_for` is an alias of `works_at`) |
+| Campaign | `Project` (`status` = active / paused / done). People and bots `works_on` it |
+| Beat | `work_create(..., part_of=<campaign>)`; `assigned_to` a Person or Agent |
+| After send | `memory_remember(kind="outreach")` mentioning Person and Campaign |
+
+Playbook `gtm-outreach`: `memory_entity_view` → draft + approval child;
+human / Grok card sends. That Person view is the CRM record.
+
+## Code scope
+
+Resolve `repo=` every chat, not only git tasks:
+
+1. Workspace slug — `git rev-parse --show-toplevel` (else the project root);
+   strip leading `/`, replace `/` with `-`. Never use `owner/repo` as `repo=`
+   (slashes are invalid).
+2. GitHub — `gh repo view --json nameWithOwner` → `github=<owner/repo>` (stored
+   as `github:<owner>/<repo>`). If an MCP call fails on `repo`, omit it and
+   retry with `github=` and/or tags.
+
+Reads are the shared brain (all agents) unless you pass `agent=` to narrow.
+Writes attribute to the authenticated identity.
+
+## Never
+
+- `memory_forget` without an explicit user request
+- `memory_session_open` after `memory_session_ensure` already returned a session_id
+- `memory_remember` for skills, playbooks, tasks, or strategic vision
+- Inventing Contact or Deal kinds — use Person / Organization / Project / WorkItem
+- Appending `[tool]` turns for teamshared MCP calls
+- Probing `TEAMSHARED_*` env vars in the shell — call `health`
+- Storing secrets, tokens, credentials, or the `mcp_auth` login code
+- Mixing this OAuth plugin with `install/codex/` (`TEAMSHARED_TOKEN`)
+- Inventing Cursor or Claude hook names that Codex does not document

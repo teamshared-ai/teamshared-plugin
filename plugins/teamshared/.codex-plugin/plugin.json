@@ -1,7 +1,7 @@
 {
   "name": "teamshared",
-  "version": "0.11.0",
-  "description": "Shared team memory for Codex through the hosted TeamShared MCP server and a recall-first workflow.",
+  "version": "0.12.0",
+  "description": "Shared team memory for Codex: hosted MCP OAuth, recall-first protocol 1.24.0, SessionStart injection, and official Codex chat-capture hooks.",
   "author": {
     "name": "Loreum Labs Ltd",
     "url": "https://github.com/teamshared-ai"
@@ -17,10 +17,11 @@
     "shared-brain"
   ],
   "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "TeamShared",
     "shortDescription": "Shared memory across Codex tasks and repos.",
-    "longDescription": "Connects Codex to TeamShared's hosted MCP server and adds a recall-first workflow for durable team memory across tasks and repositories.",
+    "longDescription": "Connects Codex to TeamShared's hosted MCP server (OAuth discovery), injects protocol 1.24.0 on SessionStart, and captures the chat through official Codex hooks so recall and commit run without naming TeamShared.",
     "developerName": "Loreum Labs Ltd",
     "category": "Productivity",
     "capabilities": [
@@ -30,9 +31,9 @@
     ],
     "websiteURL": "https://teamshared.com",
     "defaultPrompt": [
-      "Recall what the team knows about this repository.",
-      "Summarize recent work and continue where we left off.",
-      "Save this decision as durable shared context."
+      "Recall what the team already knows, then continue this work.",
+      "Pick up the last decision and implement the next change.",
+      "Save this outcome as durable shared team context."
     ]
   },
   "mcpServers": "./.mcp.json"

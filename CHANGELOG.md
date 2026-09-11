@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **0.12.0 Codex plugin excellence:** `plugins/teamshared/` is first-class
+  TeamShared (protocol **1.24.0**), not a thin MCP wrapper. `SessionStart`
+  injects the recall-first loop via official Codex `additionalContext`.
+  Capture hooks use only documented Codex events (`UserPromptSubmit`, `Stop`,
+  `SessionEnd`, `PostToolUse` on failed `Bash`, `PreCompact`) and write
+  through `memory_session_ensure` / `memory_session_append` /
+  `context_commit` / `memory_session_close`. Native `.mcp.json` stays OAuth
+  discovery (no headers). Hook subprocesses read Codex
+  `$CODEX_HOME/.credentials.json`, then `TEAMSHARED_TOKEN` as last resort;
+  keyring-only OAuth is a documented fail-open gap. Codex has no
+  `StopFailure` or `PostToolUseFailure` (Claude-only). Skill expanded to
+  1.24.0 parity (`work_id` / `playbook_slug`, soul / agent_memory / playbook,
+  named gets, `~/.codex/AGENTS.md` version notes). `$status` skill.
+  `install/codex/` remains the `tsk_` fallback — do not mix. Cursor package
+  at repo root is unchanged.
 - **0.12.0 Claude Code plugin excellence:** `claude/` is first-class TeamShared
   (protocol **1.24.0**), not a thin MCP wrapper. `SessionStart` injects the
   recall-first loop via official `additionalContext`. Capture hooks use only

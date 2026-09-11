@@ -1,7 +1,7 @@
 interface:
   display_name: "TeamShared Memory"
-  short_description: "Recall and preserve shared team context"
-  default_prompt: "Use $teamshared-memory to recall relevant project context before helping me."
+  short_description: "Recall and preserve shared team context every turn"
+  default_prompt: "Recall shared team context, then continue; commit the outcome."
 
 dependencies:
   tools:
