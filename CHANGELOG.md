@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **0.13.0 protocol 1.27.0:** all three marketplace packages advertise
+  protocol **1.27.0** so `version` upgrades can complete (Codex was stuck
+  on plugin 0.12.0 / protocol 1.24.0 vs server 1.26.0). Cursor package
+  `0.11.0` → `0.13.0` (skipped `0.12.0`, already used by Claude/Codex);
+  Claude and Codex `0.12.0` → `0.13.0`. Rule keeps 1.26 semantics
+  (`memory_changes_since`, degraded recall / metrics notes) and restores
+  full Cursor capture-hook docs (`sessionStart` → `sessionEnd` plus
+  `postToolUse` / `preCompact`) — do **not** copy the 1.26.0 "two hooks
+  only" paragraph. Claude/Codex SessionStart injectors, `teamshared-memory`
+  skills, and `$status` / `/teamshared:status` now pass `1.27.0`.
+  `validate.sh` fails if `rules/teamshared.mdc` drifts from
+  `PROTOCOL_VERSION`. Canonical server copy is teamshared#320.
 - **0.12.0 Codex plugin excellence:** `plugins/teamshared/` is first-class
   TeamShared (protocol **1.24.0**), not a thin MCP wrapper. `SessionStart`
   injects the recall-first loop via official Codex `additionalContext`.

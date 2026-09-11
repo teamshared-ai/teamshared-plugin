@@ -2,7 +2,7 @@
 
 Registers the hosted TeamShared MCP server at `https://teamshared.com/mcp`
 and treats Claude Code as a first-class TeamShared client: recall-first
-protocol **1.24.0**, SessionStart injection, and chat-capture hooks.
+protocol **1.27.0**, SessionStart injection, and chat-capture hooks.
 
 Claude Code does **not** inherit Cursor Connect. Authenticate with a `tsk_`
 org key in `TEAMSHARED_TOKEN`. Never commit that value.
@@ -48,9 +48,9 @@ After install, confirm MCP tools appear (`memory_recall`, `memory_remember`,
 
 Then:
 
-1. `/reload-plugins` (or start a new session) so `SessionStart` injects protocol 1.24.0.
+1. `/reload-plugins` (or start a new session) so `SessionStart` injects protocol 1.27.0.
 2. Confirm `/mcp` lists TeamShared tools.
-3. `/teamshared:status` — health + `version` (`installed_rule_version` 1.24.0).
+3. `/teamshared:status` — health + `version` (`installed_rule_version` 1.27.0).
 4. Work normally. Every turn: `memory_session_ensure` → `memory_recall` → work → `context_commit`.
 
 Durable backup (manual, not this plugin): merge `install/claude/mcp.json` and
@@ -62,7 +62,7 @@ replace `__MCP_URL__` / `__TEAMSHARED_TOKEN__` yourself.
 |---|---|
 | `.mcp.json` | Remote HTTP MCP `https://teamshared.com/mcp` + `TEAMSHARED_TOKEN` header |
 | `hooks/hooks.json` | Official Claude Code events only (see below) |
-| `skills/teamshared-memory/` | Protocol **1.24.0** (same loop as `rules/teamshared.mdc`) |
+| `skills/teamshared-memory/` | Protocol **1.27.0** (same loop as `rules/teamshared.mdc`) |
 | `skills/status/` | Slash skill `/teamshared:status` |
 
 ## Hooks (official Claude Code events)
@@ -72,7 +72,7 @@ This package does **not** invent Cursor-only names.
 
 | Event | What it does |
 |---|---|
-| `SessionStart` | Injects protocol 1.24.0 via `additionalContext`; maps Claude `session_id` → `memory_session_ensure` |
+| `SessionStart` | Injects protocol 1.27.0 via `additionalContext`; maps Claude `session_id` → `memory_session_ensure` |
 | `UserPromptSubmit` | Appends the redacted user prompt (`ensure(user=)`) |
 | `Stop` | Appends the redacted assistant text (`last_assistant_message`). Does **not** distill — Stop fires every turn |
 | `StopFailure` | Notes API-error turns; does not close the session |
@@ -92,7 +92,7 @@ export CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS=10000
 
 ## Version updates
 
-On the first turn, call `version` with `installed_rule_version` `1.24.0`.
+On the first turn, call `version` with `installed_rule_version` `1.27.0`.
 If `update_available: true`, write `rule_markdown` to
 `~/.claude/rules/teamshared.md` (or `.claude/rules/teamshared.md` in a repo).
 Never invent a version. This is the Claude write path — Cursor still uses

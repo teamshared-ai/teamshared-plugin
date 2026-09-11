@@ -7,14 +7,14 @@
   },
   "metadata": {
     "description": "TeamShared — shared agent memory MCP plugin for Claude Code",
-    "version": "0.12.0"
+    "version": "0.13.0"
   },
   "plugins": [
     {
       "name": "teamshared",
       "source": "./claude",
-      "description": "Shared team memory for Claude Code: remote MCP, TEAMSHARED_TOKEN auth, recall-first protocol 1.24.0, SessionStart injection, and chat-capture hooks.",
-      "version": "0.12.0",
+      "description": "Shared team memory for Claude Code: remote MCP, TEAMSHARED_TOKEN auth, recall-first protocol 1.27.0, SessionStart injection, and chat-capture hooks.",
+      "version": "0.13.0",
       "author": {
         "name": "Loreum Labs Ltd"
       },

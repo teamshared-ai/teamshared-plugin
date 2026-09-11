@@ -10,11 +10,11 @@ capture Agent Chat (`sessionStart`, `beforeSubmitPrompt`,
 
 Claude Code installs from the same GitHub URL via
 `.claude-plugin/marketplace.json` (separate first-class package under
-`claude/`: MCP + protocol 1.24.0 + official Claude Code capture hooks).
+`claude/`: MCP + protocol 1.27.0 + official Claude Code capture hooks).
 Official Anthropic marketplace submit is out of scope.
 
 Codex installs from `.agents/plugins/marketplace.json` (package under
-`plugins/teamshared/`: OAuth MCP + protocol 1.24.0 + official Codex capture
+`plugins/teamshared/`: OAuth MCP + protocol 1.27.0 + official Codex capture
 hooks). Keep that OAuth path separate from `install/codex/` (`tsk_`).
 
 ## Install (team / git marketplace)
@@ -163,7 +163,7 @@ teamshared-plugin/
 │   └── plugin.json
 ├── .claude-plugin/
 │   └── marketplace.json   # Claude Code catalog: source ./claude
-├── claude/                # Claude Code plugin (MCP + 1.24 protocol + capture hooks)
+├── claude/                # Claude Code plugin (MCP + 1.27 protocol + capture hooks)
 ├── plugin.json            # Agent Plugins 1.0.0 / cursor.directory discovery
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
@@ -172,7 +172,7 @@ teamshared-plugin/
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── .agents/plugins/
 │   └── marketplace.json   # Codex catalog: source ./plugins/teamshared
-├── plugins/teamshared/    # Codex plugin (OAuth MCP + 1.24 protocol + capture hooks)
+├── plugins/teamshared/    # Codex plugin (OAuth MCP + 1.27 protocol + capture hooks)
 ├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env; do not mix)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg

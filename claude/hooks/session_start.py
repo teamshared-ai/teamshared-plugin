@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude SessionStart — inject protocol 1.24.0 and ensure a working session."""
+"""Claude SessionStart — inject protocol 1.27.0 and ensure a working session."""
 
 from __future__ import annotations
 

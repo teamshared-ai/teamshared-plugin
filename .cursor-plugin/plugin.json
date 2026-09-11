@@ -1,7 +1,7 @@
 {
   "name": "teamshared",
   "displayName": "TeamShared",
-  "version": "0.11.0",
+  "version": "0.13.0",
   "description": "Shared team memory for Cursor: remote MCP with email/OTP Connect, the recall-first memory rule, and hooks that capture Agent Chat plus failed-tool/preCompact events.",
   "author": {
     "name": "Loreum Labs Ltd"

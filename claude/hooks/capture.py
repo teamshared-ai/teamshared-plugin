@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import Any
 
 MCP_URL = "https://teamshared.com/mcp"
-PLUGIN_VERSION = "0.12.0"
-PROTOCOL_VERSION = "1.24.0"
+PLUGIN_VERSION = "0.13.0"
+PROTOCOL_VERSION = "1.27.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900
@@ -56,12 +56,12 @@ _EXIT_CODE_RE = re.compile(r"(?i)exit code\s+(\d+)")
 
 # Injected on SessionStart (official additionalContext). Keep under the
 # 10k hook-output cap. Full protocol lives in skills/teamshared-memory.
-PROTOCOL_CONTEXT = """# TeamShared memory protocol 1.24.0
+PROTOCOL_CONTEXT = f"""# TeamShared memory protocol {PROTOCOL_VERSION}
 
 The `teamshared` MCP server is durable memory across sessions and repos.
 Auth is a `tsk_` bearer from `TEAMSHARED_TOKEN`. Claude Code does not inherit
 Cursor Connect. Do not call `mcp_auth` as the first hop. Never store secrets,
-tokens, or credentials. Follow the `teamshared-memory` skill (protocol 1.24.0)
+tokens, or credentials. Follow the `teamshared-memory` skill (protocol {PROTOCOL_VERSION})
 for fetch/store, CRM, and version updates.
 
 Unsure which tool? Call `memory_tools_catalog(need="<intent>")`.
@@ -71,18 +71,19 @@ Unsure which tool? Call `memory_tools_catalog(need="<intent>")`.
 1. `memory_session_ensure(repo=..., topic=..., fresh=<first turn>, user=<request>)`
    Bound work → `work_id=`; named playbook → `playbook_slug=`. Omit both when
    unbound. Adopt non-empty `soul`, `agent_memory`, and `playbook` from ensure.
-2. `memory_recall(...)` for keywords. Named playbook/skill/entity →
-   `memory_playbook_get` / `memory_skill_get` / `memory_entity_view`.
+2. `memory_recall(...)` for keywords. Resume handoff: `memory_changes_since(cursor=...)`.
+   Named playbook/skill/entity → `memory_playbook_get` / `memory_skill_get` / `memory_entity_view`.
 3. Do the work.
 4. `context_commit(summary=..., facts=[...], repo=..., github=..., close=<done?>)`
    — last MCP call of the turn.
 
 On the first turn (or when asked about versions), call `version` with
-`installed_rule_version` `1.24.0`. If `update_available: true`, write
+`installed_rule_version` `{PROTOCOL_VERSION}`. If `update_available: true`, write
 `rule_markdown` verbatim to `~/.claude/rules/teamshared.md` (or
 `.claude/rules/teamshared.md` in a repo). Never invent a version.
 
-Plugin hooks already capture this chat into TeamShared working memory
+`memory_recall` may return `degraded: true` with `errors_by_pillar` — treat as
+partial. Plugin hooks already capture this chat into TeamShared working memory
 (`UserPromptSubmit` / `Stop` / `SessionEnd`). Still recall first; do not
 re-append the same user/assistant text in the same turn.
 """

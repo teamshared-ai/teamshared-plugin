@@ -214,7 +214,8 @@ class TurnCaptureTests(unittest.TestCase):
                         )
         output = extra["hookSpecificOutput"]
         self.assertEqual(output["hookEventName"], "SessionStart")
-        self.assertIn("1.24.0", output["additionalContext"])
+        self.assertIn("1.27.0", output["additionalContext"])
+        self.assertIn("memory_changes_since", output["additionalContext"])
         self.assertIn("memory_session_ensure", output["additionalContext"])
         self.assertIn("work_id", output["additionalContext"])
         self.assertTrue(calls[0][1]["fresh"])
@@ -360,7 +361,9 @@ class HooksManifestTests(unittest.TestCase):
             "pre_compact.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)
-        self.assertIn("1.24.0", capture.PROTOCOL_CONTEXT)
+        self.assertEqual(capture.PROTOCOL_VERSION, "1.27.0")
+        self.assertIn("1.27.0", capture.PROTOCOL_CONTEXT)
+        self.assertIn("memory_changes_since", capture.PROTOCOL_CONTEXT)
         self.assertLess(len(capture.PROTOCOL_CONTEXT), 10000)
 
 
