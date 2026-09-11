@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Structural checks for the Cursor plugin (MCP + recall rule + two hooks),
+# Structural checks for the Cursor plugin (MCP + recall rule + chat-capture hooks),
 # Claude Code marketplace package, and native Codex marketplace package.
 set -euo pipefail
 
@@ -46,6 +46,11 @@ check "$ROOT/hooks/hooks.json"
 check "$ROOT/hooks/capture.py"
 check "$ROOT/hooks/post_tool_use.py"
 check "$ROOT/hooks/pre_compact.py"
+check "$ROOT/hooks/session_start.py"
+check "$ROOT/hooks/before_submit_prompt.py"
+check "$ROOT/hooks/after_agent_response.py"
+check "$ROOT/hooks/stop.py"
+check "$ROOT/hooks/session_end.py"
 check "$ROOT/.claude-plugin/marketplace.json"
 check "$ROOT/claude/.claude-plugin/plugin.json"
 check "$ROOT/claude/.mcp.json"
@@ -236,12 +241,22 @@ with open(hooks_path) as f:
     hooks = json.load(f)
 print(f"ok  JSON  {hooks_path}")
 events = hooks.get("hooks") or {}
-if set(events) != {"postToolUse", "preCompact"}:
-    print(f"FAIL  hooks.json must register only postToolUse and preCompact, got {sorted(events)}")
+required = {
+    "sessionStart",
+    "beforeSubmitPrompt",
+    "afterAgentResponse",
+    "stop",
+    "sessionEnd",
+    "postToolUse",
+    "preCompact",
+}
+if set(events) != required:
+    print(f"FAIL  hooks.json must register {sorted(required)}, got {sorted(events)}")
     sys.exit(1)
-if not events["postToolUse"] or not events["preCompact"]:
-    print("FAIL  hooks.json postToolUse and preCompact must each have a command")
-    sys.exit(1)
+for name in required:
+    if not events.get(name) or not events[name][0].get("command"):
+        print(f"FAIL  hooks.json {name} must have a command")
+        sys.exit(1)
 matcher = events["postToolUse"][0].get("matcher")
 if matcher != "Shell":
     print(f"FAIL  postToolUse matcher must be Shell, got {matcher!r}")
@@ -249,7 +264,7 @@ if matcher != "Shell":
 if "tsk_" in json.dumps(hooks):
     print("FAIL  hooks.json must not contain a tsk_ key")
     sys.exit(1)
-print("ok  hooks  postToolUse + preCompact only")
+print("ok  hooks  chat capture + postToolUse + preCompact")
 
 with open(claude_market_path) as f:
     claude_market = json.load(f)
@@ -422,7 +437,7 @@ for doc in "$ROOT/README.md" "$ROOT/MARKETPLACE.md"; do
     echo "FAIL  $doc must say the plugin still has no skills/agents/commands"
     FAIL=1
   else
-    echo "ok  docs  $(basename "$doc") two hooks, no skills"
+    echo "ok  docs  $(basename "$doc") hooks + no skills"
   fi
 done
 

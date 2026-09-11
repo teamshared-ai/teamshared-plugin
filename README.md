@@ -1,9 +1,11 @@
 # teamshared (Cursor, Claude Code, and Codex plugins)
 
 Registers the teamshared MCP server. The **Cursor** plugin also ships the
-recall-first memory rule and two Cursor hooks (`postToolUse` for failed
-test/lint/shell, `preCompact` for a short session summary). The Cursor
-plugin still has no skills, slash commands, extra hooks, or extra agents.
+recall-first memory rule and Cursor hooks that capture Agent Chat into
+TeamShared (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`,
+`stop`, `sessionEnd`) plus `postToolUse` (failed test/lint/shell) and
+`preCompact`. The Cursor plugin still has no skills, slash commands, or
+extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
 (remote MCP + `TEAMSHARED_TOKEN` auth). Claude Code does not inherit Cursor Connect.
@@ -19,7 +21,7 @@ and is hosted at [teamshared.com](https://teamshared.com).
 |---|---|
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
-| `hooks/` | Two Cursor hooks only: `postToolUse` (failed test/lint/shell) and `preCompact` |
+| `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell) and `preCompact` |
 | `claude/` | Claude Code plugin (remote MCP + `TEAMSHARED_TOKEN`; no Cursor hooks) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
@@ -91,9 +93,9 @@ still uses `.cursor-plugin/` and `mcp.json`.
 Ready-to-paste listing description:
 
 ```
-TeamShared is hosted MCP plus the recall-first memory rule and two Cursor
-hooks (failed test/lint/shell + preCompact). No skills, slash commands, or
-extra agents.
+TeamShared is hosted MCP plus the recall-first memory rule and Cursor
+hooks that capture Agent Chat (plus failed test/lint/shell + preCompact).
+No skills, slash commands, or extra agents.
 
 Install in Cursor:
 1. Settings → Plugins → Add marketplace
@@ -141,14 +143,24 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   (registered by `mcp.json` when the plugin is installed).
 - **Rule**: injects the recall-first protocol on every agent turn, and points
   teammates to the web console (`/app`) for human actions.
-- **Two hooks only**: `postToolUse` appends a short episodic fact when a
-  Shell test/lint/command fails (command + error tail, secrets stripped).
-  `preCompact` writes a short session summary through `context_commit`.
-  Both reuse the existing Connect session — no `tsk_` in `mcp.json`.
+- **Cursor hooks**: Agent Chat turns are appended to TeamShared in
+  near-real-time without waiting for the agent to call
+  `memory_session_ensure` / `context_commit`. `sessionStart` maps
+  `conversation_id` onto a working session; `beforeSubmitPrompt` and
+  `afterAgentResponse` append redacted user/assistant text; `sessionEnd`
+  closes and distills. `stop` only notes aborted/error loops (it fires
+  after every turn, so it does not distill). `postToolUse` still appends a
+  short episodic fact when a Shell test/lint/command fails (command +
+  error tail, secrets stripped). `preCompact` writes a short session
+  summary. All reuse the existing Connect session — no `tsk_` in
+  `mcp.json`. Fail-open if MCP is unreachable. Cloud agents may skip
+  `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
+  Agents still recall first and may commit curated facts; hooks store the
+  transcript.
 
-The Cursor plugin still has no skills, slash commands, extra agents, or extra
-hooks. The Claude Code and Codex packages each add a thin
-`teamshared-memory` skill.
+The Cursor plugin still has no skills, slash commands, or extra agents.
+The Claude Code and Codex packages each add a thin `teamshared-memory`
+skill.
 
 ## Other clients
 

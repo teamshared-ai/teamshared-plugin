@@ -84,10 +84,16 @@ memory_recall(
 `summary` is a faithful assistant reply — not UI boilerplate. Truncate long
 tool output. Never store secrets, tokens, or credentials.
 
-The plugin also ships **two Cursor hooks** (no others): `postToolUse` writes a
-short episodic fact when a Shell test/lint/command fails; `preCompact` writes a
-short session summary. Both use the same ingest path (`context_commit`) and the
-existing Connect session. Do not duplicate that write in the same turn.
+The plugin also ships Cursor hooks that capture Agent Chat into TeamShared
+working memory (Connect token only, fail-open): `sessionStart` maps
+`conversation_id` → `memory_session_ensure`; `beforeSubmitPrompt` and
+`afterAgentResponse` append redacted user/assistant turns;
+`sessionEnd` closes and distills. `postToolUse` still writes a short
+episodic fact when a Shell test/lint/command fails; `preCompact` writes a
+short session summary. Hooks store the transcript; you still recall first
+and may `context_commit` curated facts. Do not re-append the same
+user/assistant text in the same turn. Cloud agents may skip `sessionStart`
+/ `sessionEnd` — later hooks still ensure + append.
 
 **Durable `facts[]`** (still true next week; one dense paragraph; `subject` +
 tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /

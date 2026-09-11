@@ -1,8 +1,9 @@
-"""Shared helpers for the two Cursor hooks (postToolUse + preCompact).
+"""Shared helpers for Cursor hooks that capture Agent Chat into TeamShared.
 
 Stdlib only. Best-effort: never block the agent loop. Writes go through the
-hosted TeamShared MCP (memory_session_ensure + context_commit) using the
-existing Cursor Connect token when we can find it — not a tsk_ in mcp.json.
+hosted TeamShared MCP (memory_session_ensure + memory_session_append +
+context_commit + memory_session_close) using the existing Cursor Connect
+token when we can find it — not a tsk_ in mcp.json.
 """
 
 from __future__ import annotations
@@ -18,11 +19,17 @@ from pathlib import Path
 from typing import Any
 
 MCP_URL = "https://teamshared.com/mcp"
+PLUGIN_VERSION = "0.11.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900
 MAX_FACT_CHARS = 1000
+MAX_TURN_CHARS = 4000
+MAX_TOPIC_CHARS = 200
 MCP_TIMEOUT_SEC = 8
+HOOK_CACHE_ENV = "TEAMSHARED_HOOK_CACHE"
+SESSION_ENV = "TEAMSHARED_SESSION_ID"
+CONVERSATION_ENV = "TEAMSHARED_CONVERSATION_ID"
 
 # Failed test / lint / generic shell — not every successful tool turn.
 _SHELL_TOOLS = {"shell", "bash"}
@@ -205,8 +212,11 @@ def failed_tool_fact(payload: dict[str, Any]) -> str:
 
 def workspace_cwd(payload: dict[str, Any] | None = None) -> Path:
     payload = payload or {}
+    roots = payload.get("workspace_roots")
+    first_root = roots[0] if isinstance(roots, list) and roots else None
     for candidate in (
         payload.get("cwd"),
+        first_root,
         os.environ.get("CURSOR_PROJECT_DIR"),
         os.environ.get("CLAUDE_PROJECT_DIR"),
         os.getcwd(),
@@ -318,6 +328,185 @@ def _transcript_text(entry: dict[str, Any]) -> str:
                 bits.append(str(block.get("text") or ""))
         return " ".join(bits).strip()
     return ""
+
+
+def _transcript_role(entry: dict[str, Any]) -> str:
+    for key in ("role", "type"):
+        val = entry.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip().lower()
+    message = entry.get("message")
+    if isinstance(message, dict):
+        val = message.get("role")
+        if isinstance(val, str) and val.strip():
+            return val.strip().lower()
+    return ""
+
+
+def transcript_last_text(payload: dict[str, Any], *, role: str | None = None) -> str:
+    """Best-effort last turn from an undocumented transcript_path JSONL file."""
+    path = payload.get("transcript_path") or os.environ.get("CURSOR_TRANSCRIPT_PATH")
+    if not isinstance(path, str) or not path.strip():
+        return ""
+    try:
+        data = Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    wanted = role.strip().lower() if isinstance(role, str) and role.strip() else None
+    last = ""
+    for line in data.splitlines():
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if wanted:
+            found = _transcript_role(entry)
+            if found and found != wanted and not found.endswith(wanted):
+                continue
+        text = _transcript_text(entry)
+        if text:
+            last = text
+    return strip_secrets(last)
+
+
+def conversation_id(payload: dict[str, Any] | None = None) -> str | None:
+    """Cursor conversation id (stable across turns). Not a TeamShared session id."""
+    payload = payload or {}
+    for key in ("conversation_id", "conversationId"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    # sessionStart / sessionEnd use session_id as an alias of conversation_id.
+    val = payload.get("session_id") or payload.get("sessionId")
+    if isinstance(val, str) and val.strip():
+        return val.strip()
+    env = os.environ.get(CONVERSATION_ENV)
+    if isinstance(env, str) and env.strip():
+        return env.strip()
+    return None
+
+
+def session_topic(cid: str | None) -> str:
+    if cid:
+        return clamp(f"cursor:{cid}", MAX_TOPIC_CHARS)
+    return "cursor"
+
+
+def session_cache_path() -> Path:
+    override = os.environ.get(HOOK_CACHE_ENV)
+    if isinstance(override, str) and override.strip():
+        return Path(override).expanduser()
+    xdg = os.environ.get("XDG_CACHE_HOME")
+    root = Path(xdg) if isinstance(xdg, str) and xdg.strip() else Path.home() / ".cache"
+    return root / "teamshared" / "cursor-hook-sessions.json"
+
+
+def _load_session_cache() -> dict[str, Any]:
+    try:
+        data = json.loads(session_cache_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_session_cache(data: dict[str, Any]) -> None:
+    path = session_cache_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(data), encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        pass
+
+
+def mapped_session_id(cid: str | None) -> str | None:
+    if cid:
+        data = _load_session_cache()
+        convos = data.get("conversations")
+        if isinstance(convos, dict):
+            entry = convos.get(cid)
+            if isinstance(entry, dict):
+                sid = entry.get("session_id")
+                if isinstance(sid, str) and sid.strip():
+                    return sid.strip()
+            elif isinstance(entry, str) and entry.strip():
+                return entry.strip()
+        env_cid = os.environ.get(CONVERSATION_ENV)
+        env_sid = os.environ.get(SESSION_ENV)
+        if isinstance(env_sid, str) and env_sid.strip():
+            if not env_cid or env_cid.strip() == cid:
+                return env_sid.strip()
+        return None
+    env = os.environ.get(SESSION_ENV)
+    if isinstance(env, str) and env.strip():
+        return env.strip()
+    return None
+
+
+def store_mapped_session(cid: str | None, session_id: str | None) -> None:
+    if not cid or not session_id:
+        return
+    data = _load_session_cache()
+    convos = data.get("conversations")
+    if not isinstance(convos, dict):
+        convos = {}
+        data["conversations"] = convos
+    convos[cid] = {"session_id": session_id}
+    _write_session_cache(data)
+
+
+def drop_mapped_session(cid: str | None) -> None:
+    if not cid:
+        return
+    data = _load_session_cache()
+    convos = data.get("conversations")
+    if not isinstance(convos, dict) or cid not in convos:
+        return
+    convos.pop(cid, None)
+    _write_session_cache(data)
+
+
+def _attachment_names(payload: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    raw = payload.get("attachments")
+    if not isinstance(raw, list):
+        return names
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        path = item.get("file_path") or item.get("path") or item.get("name")
+        if isinstance(path, str) and path.strip():
+            names.append(Path(path).name)
+    return names
+
+
+def user_prompt_text(payload: dict[str, Any]) -> str:
+    text = ""
+    for key in ("prompt", "user_prompt", "user_message"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            text = strip_secrets(val.strip())
+            break
+    if not text:
+        text = transcript_last_text(payload, role="user")
+    names = _attachment_names(payload)
+    if names:
+        extra = "[attachments: " + ", ".join(names) + "]"
+        text = f"{text}\n{extra}" if text else extra
+    return clamp(text, MAX_TURN_CHARS)
+
+
+def assistant_response_text(payload: dict[str, Any]) -> str:
+    for key in ("text", "response", "assistant_text", "message"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return clamp(strip_secrets(val.strip()), MAX_TURN_CHARS)
+    return clamp(transcript_last_text(payload, role="assistant"), MAX_TURN_CHARS)
 
 
 def resolve_token() -> str | None:
@@ -456,7 +645,7 @@ def mcp_call(name: str, arguments: dict[str, Any], token: str, url: str = MCP_UR
         "params": {
             "protocolVersion": "2025-03-26",
             "capabilities": {},
-            "clientInfo": {"name": "teamshared-cursor-hooks", "version": "0.10.0"},
+            "clientInfo": {"name": "teamshared-cursor-hooks", "version": PLUGIN_VERSION},
         },
     }
     try:
@@ -509,6 +698,106 @@ def _session_id_from_result(result: dict[str, Any] | None) -> str | None:
     return None
 
 
+def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | None]:
+    cwd = workspace_cwd(payload)
+    github = github_slug(cwd)
+    return repo_slug(cwd), github, conversation_id(payload)
+
+
+def ensure_session(
+    payload: dict[str, Any] | None = None,
+    *,
+    fresh: bool = False,
+    user: str | None = None,
+    token: str | None = None,
+) -> str | None:
+    """Map this Cursor conversation onto a TeamShared working session."""
+    token = token if token is not None else resolve_token()
+    if not token:
+        return None
+    payload = payload or {}
+    repo, github, cid = _scope_args(payload)
+    cached = mapped_session_id(cid)
+    if cached and fresh:
+        # sessionStart can fire more than once for the same composer id.
+        fresh = False
+    ensure_args: dict[str, Any] = {
+        "repo": repo,
+        "topic": session_topic(cid),
+        "fresh": fresh,
+    }
+    if github:
+        ensure_args["github"] = github
+    if user:
+        ensure_args["user"] = clamp(strip_secrets(user), MAX_TURN_CHARS)
+    ensured = mcp_call("memory_session_ensure", ensure_args, token)
+    session_id = _session_id_from_result(ensured) or (cached if not fresh else None)
+    if session_id:
+        store_mapped_session(cid, session_id)
+    return session_id
+
+
+def append_turn(
+    role: str,
+    content: str,
+    payload: dict[str, Any] | None = None,
+    *,
+    token: str | None = None,
+) -> bool:
+    """Append one redacted turn via memory_session_append (self-healing)."""
+    token = token if token is not None else resolve_token()
+    if not token:
+        return False
+    payload = payload or {}
+    content = clamp(strip_secrets(content), MAX_TURN_CHARS)
+    if not content:
+        return False
+    repo, github, cid = _scope_args(payload)
+    session_id = mapped_session_id(cid) or ensure_session(payload, token=token, fresh=False)
+    if not session_id:
+        return False
+    args: dict[str, Any] = {
+        "session_id": session_id,
+        "role": role,
+        "content": content,
+        "repo": repo,
+        "topic": session_topic(cid),
+    }
+    if github:
+        args["github"] = github
+    result = mcp_call("memory_session_append", args, token)
+    new_id = _session_id_from_result(result)
+    if new_id:
+        store_mapped_session(cid, new_id)
+    return result is not None
+
+
+def close_session(
+    payload: dict[str, Any] | None = None,
+    *,
+    reason: str | None = None,
+    token: str | None = None,
+) -> bool:
+    """Close + distill the mapped working session when the composer ends."""
+    token = token if token is not None else resolve_token()
+    if not token:
+        return False
+    payload = payload or {}
+    cid = conversation_id(payload)
+    session_id = mapped_session_id(cid)
+    if reason:
+        note = clamp(strip_secrets(f"Cursor sessionEnd ({reason})."), MAX_SUMMARY_CHARS)
+        append_turn("system", note, payload, token=token)
+        session_id = mapped_session_id(cid) or session_id
+    if not session_id:
+        session_id = ensure_session(payload, token=token, fresh=False)
+    if not session_id:
+        return False
+    result = mcp_call("memory_session_close", {"session_id": session_id, "distill": True}, token)
+    drop_mapped_session(cid)
+    return result is not None
+
+
 def ingest(
     summary: str,
     *,
@@ -520,19 +809,10 @@ def ingest(
     token = token if token is not None else resolve_token()
     if not token:
         return False
-    cwd = workspace_cwd(payload)
-    repo = repo_slug(cwd)
-    github = github_slug(cwd)
+    payload = payload or {}
+    repo, github, _cid = _scope_args(payload)
     summary = clamp(strip_secrets(summary), MAX_SUMMARY_CHARS)
-    ensure_args: dict[str, Any] = {
-        "repo": repo,
-        "topic": "cursor",
-        "fresh": False,
-    }
-    if github:
-        ensure_args["github"] = github
-    ensured = mcp_call("memory_session_ensure", ensure_args, token)
-    session_id = _session_id_from_result(ensured)
+    session_id = ensure_session(payload, token=token, fresh=False)
     commit_args: dict[str, Any] = {
         "summary": summary,
         "repo": repo,
@@ -555,5 +835,59 @@ def ingest(
     return committed is not None
 
 
+def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
+    session_id = ensure_session(payload, fresh=True)
+    extra: dict[str, Any] = {}
+    env: dict[str, str] = {}
+    cid = conversation_id(payload)
+    if cid:
+        env[CONVERSATION_ENV] = cid
+    if session_id:
+        env[SESSION_ENV] = session_id
+    if env:
+        extra["env"] = env
+    return extra
+
+
+def handle_before_submit_prompt(payload: dict[str, Any]) -> dict[str, Any]:
+    prompt = user_prompt_text(payload)
+    if prompt:
+        ensure_session(payload, fresh=False, user=prompt)
+    return {"continue": True}
+
+
+def handle_after_agent_response(payload: dict[str, Any]) -> dict[str, Any]:
+    text = assistant_response_text(payload)
+    if text:
+        append_turn("assistant", text, payload)
+    return {}
+
+
+def handle_stop(payload: dict[str, Any]) -> dict[str, Any]:
+    """Agent loop ended. Do not distill here — stop fires after every turn."""
+    status = str(payload.get("status") or "").strip().lower()
+    if status in {"aborted", "error"}:
+        append_turn("system", f"Cursor stop: {status}.", payload)
+    return {}
+
+
+def handle_session_end(payload: dict[str, Any]) -> dict[str, Any]:
+    reason = payload.get("reason") or payload.get("final_status") or "completed"
+    close_session(payload, reason=str(reason))
+    return {}
+
+
 def emit_ok(extra: dict[str, Any] | None = None) -> None:
     sys.stdout.write(json.dumps(extra or {}) + "\n")
+
+
+def run_hook(handler: Any) -> int:
+    extra: dict[str, Any] = {}
+    try:
+        result = handler(read_stdin_json())
+        if isinstance(result, dict):
+            extra = result
+    except Exception:
+        extra = {}
+    emit_ok(extra)
+    return 0
