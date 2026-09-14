@@ -40,7 +40,8 @@ uses `TEAMSHARED_TOKEN` and should not be installed alongside this plugin.
 
 | Component | Purpose |
 |---|---|
-| `.codex-plugin/plugin.json` | Native Codex plugin manifest, UI metadata, `interface.defaultPrompt` |
+| `.codex-plugin/plugin.json` | Native Codex plugin manifest, UI metadata, `interface.defaultPrompt`, `interface.logo` / `composerIcon` |
+| `assets/logo.png` / `assets/icon.png` | Brand mark for ChatGPT Sources and the Codex plugin directory (paths stay inside this package) |
 | `.mcp.json` | Streamable HTTP MCP to `https://teamshared.com/mcp` (OAuth, no headers) |
 | `hooks/hooks.json` | Official Codex events only (see below). Auto-discovered; also declared in the manifest |
 | `skills/teamshared-memory/` | Protocol **1.27.0** (same loop as `rules/teamshared.mdc`) |

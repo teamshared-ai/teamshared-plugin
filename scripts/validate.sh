@@ -70,6 +70,8 @@ check "$ROOT/claude/hooks/pre_compact.py"
 check "$ROOT/claude/hooks/test_capture.py"
 check "$ROOT/.agents/plugins/marketplace.json"
 check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
+check "$ROOT/plugins/teamshared/assets/logo.png"
+check "$ROOT/plugins/teamshared/assets/icon.png"
 check "$ROOT/plugins/teamshared/.mcp.json"
 check "$ROOT/plugins/teamshared/README.md"
 check "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md"
@@ -514,6 +516,24 @@ for field in ("displayName", "shortDescription", "longDescription", "developerNa
     if field not in interface:
         print(f"FAIL  Codex plugin interface missing {field}")
         sys.exit(1)
+if interface.get("composerIcon") != "./assets/icon.png":
+    print(
+        "FAIL  Codex plugin.json interface.composerIcon must be './assets/icon.png', "
+        f"got {interface.get('composerIcon')!r}"
+    )
+    sys.exit(1)
+if interface.get("logo") != "./assets/logo.png":
+    print(
+        "FAIL  Codex plugin.json interface.logo must be './assets/logo.png', "
+        f"got {interface.get('logo')!r}"
+    )
+    sys.exit(1)
+if interface.get("logoDark") != "./assets/logo.png":
+    print(
+        "FAIL  Codex plugin.json interface.logoDark must be './assets/logo.png', "
+        f"got {interface.get('logoDark')!r}"
+    )
+    sys.exit(1)
 prompts = interface.get("defaultPrompt") or []
 if not isinstance(prompts, list) or not 1 <= len(prompts) <= 3:
     print("FAIL  Codex defaultPrompt must be 1-3 starter strings")

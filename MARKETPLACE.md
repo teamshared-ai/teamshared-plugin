@@ -83,7 +83,8 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - [ ] Plugin ships `rules/teamshared.mdc` and Cursor hooks in `hooks/` (chat capture + `postToolUse` + `preCompact`; no `skills/`, `agents/`, or `commands/`)
 - [ ] `README.md` covers install, MCP config, and what the plugin does
 - [ ] `LICENSE` and `CHANGELOG.md` present
-- [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`; both `plugin.json` and `marketplace.json` reference `assets/logo.png` (relative path, not a remote URL)
+- [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`; both Cursor `plugin.json` and `marketplace.json` reference `assets/logo.png` (relative path, not a remote URL)
+- [ ] Codex package logos live inside `plugins/teamshared/assets/` (`logo.png` 512×512, `icon.png` 128×128); `.codex-plugin/plugin.json` sets `interface.logo` / `logoDark` → `./assets/logo.png` and `interface.composerIcon` → `./assets/icon.png`
 - [ ] Test locally: symlink to `~/.cursor/plugins/local/teamshared`, reload, verify MCP + rule
 
 ### Validate locally
@@ -173,6 +174,8 @@ teamshared-plugin/
 ├── .agents/plugins/
 │   └── marketplace.json   # Codex catalog: source ./plugins/teamshared
 ├── plugins/teamshared/    # Codex plugin (OAuth MCP + 1.27 protocol + capture hooks)
+│   ├── .codex-plugin/plugin.json  # interface.logo + composerIcon
+│   └── assets/logo.png / icon.png  # ChatGPT Sources + Codex directory
 ├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env; do not mix)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg
