@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **ChatGPT / Codex logo:** `plugins/teamshared/.codex-plugin/plugin.json`
+  now sets `interface.logo`, `interface.logoDark`, and `interface.composerIcon`
+  to files inside that package (`assets/logo.png` 512×512,
+  `assets/icon.png` 128×128). Marketplace install reads this nested plugin,
+  not a repo-root `.codex-plugin/`. Bump Codex package `0.13.0` → `0.13.1`
+  so ChatGPT/Codex re-import the listing.
 - **Claude Code: OAuth for the MCP connection.** Removed the static
   `Authorization: Bearer ${TEAMSHARED_TOKEN}` header from `claude/.mcp.json`.
   Claude Code has its own native MCP OAuth flow (auto-detects the server

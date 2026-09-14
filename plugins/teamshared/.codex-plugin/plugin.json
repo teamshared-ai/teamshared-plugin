@@ -1,6 +1,6 @@
 {
   "name": "teamshared",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Shared team memory for Codex: hosted MCP OAuth, recall-first protocol 1.27.0, SessionStart injection, and official Codex chat-capture hooks.",
   "author": {
     "name": "Loreum Labs Ltd",
@@ -30,6 +30,10 @@
       "Write"
     ],
     "websiteURL": "https://teamshared.com",
+    "brandColor": "#7CC242",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo.png",
     "defaultPrompt": [
       "Recall what the team already knows, then continue this work.",
       "Pick up the last decision and implement the next change.",
