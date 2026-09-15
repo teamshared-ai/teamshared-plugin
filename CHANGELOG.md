@@ -6,6 +6,12 @@
   matches the server copy. Agents relay `memory_session_ensure` `warnings`
   once per session and suggest `teamshared org bind <slug>`. Binding is
   not required.
+- **D4 docs: one Connect, one org per repo (#38):** install guides teach
+  connect once and `teamshared org bind <slug>` (`.teamshared/org`). Do not
+  add a second TeamShared server. Unbound `/mcp` keeps working. Bots that
+  must stay in one org use `teamshared token mint` (org-scoped seat key).
+  Covers Cursor, Claude Code, Codex, and Cursor Cloud. Agent copy in
+  `AGENTS.md`. `scripts/validate.sh` checks the install docs.
 - **D2 capture follows bound org (#37):** hooks resolve `.teamshared/org`
   via `scripts/org_binding.py` and POST transcripts to
   `https://teamshared.com/o/{slug}/mcp`. Unbound or invalid bindings stay
