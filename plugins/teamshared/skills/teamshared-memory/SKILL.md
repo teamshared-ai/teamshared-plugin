@@ -17,9 +17,11 @@ fallback after initialize when the host has no token. Never store tokens,
 credentials, or login codes in TeamShared memory.
 
 The separate `install/codex/` TOML path uses `TEAMSHARED_TOKEN` (`tsk_`
-minted at https://teamshared.com/app/keys). Do **not** install that fallback
-alongside this plugin. Point humans at the console (`/app`) for sign-in,
-wiki, people, and keys.
+from `teamshared token mint` or https://teamshared.com/app/keys). Do **not**
+install that fallback alongside this plugin (that adds a second TeamShared
+server). Bind the checkout with `teamshared org bind <slug>`. Unbound `/mcp`
+keeps working. Point humans at the console (`/app`) for sign-in, wiki,
+people, and keys.
 
 This skill is protocol **1.29.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex

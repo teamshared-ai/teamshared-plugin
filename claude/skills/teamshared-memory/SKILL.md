@@ -19,11 +19,14 @@ token and `/mcp` isn't available.
 
 The chat-capture **hooks** (below) are a separate subprocess with no access
 to that OAuth token, so they authenticate independently with a `tsk_` bearer
-from `TEAMSHARED_TOKEN` (`Authorization: Bearer tsk_…`), minted at
+from `TEAMSHARED_TOKEN` (`Authorization: Bearer tsk_…`), minted with
+`teamshared token mint` (org-scoped seat key) or at
 https://teamshared.com/app/keys. They're optional — unset, they simply don't
 capture anything, and the MCP connection and every-turn workflow are
-unaffected. Never store or print the token. Point humans at the console
-(`/app`) for sign-in, wiki, people, and keys.
+unaffected. Never store or print the token. Bind the checkout with
+`teamshared org bind <slug>`; do not add a second TeamShared server.
+Unbound `/mcp` keeps working. Point humans at the console (`/app`) for
+sign-in, wiki, people, and keys.
 
 This skill is protocol **1.29.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Claude Code
