@@ -2,7 +2,10 @@
 
 Cursor Cloud / Grok Bot inherit account-level Connect (see the plugin README) —
 do not treat `mcp_auth` as the primary path, and do not put a key in the plugin
-`mcp.json`. This file is the paste-in protocol for other hosts that authenticate
+`mcp.json`. Connect once; bind the repo with `teamshared org bind <slug>`.
+Do not add a second TeamShared server. Unbound `/mcp` keeps working. Bots
+that must stay in one org use `teamshared token mint` (org-scoped seat key).
+This file is the paste-in protocol for other hosts that authenticate
 with a `tsk_` bearer on the MCP headers (`Authorization: Bearer tsk_…`).
 
 Paste this block into the host's system prompt, project instructions, or

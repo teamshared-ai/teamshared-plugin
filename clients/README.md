@@ -1,10 +1,15 @@
 # Reference MCP snippets (manual setup)
 
 These files are **documentation and copy-paste examples** for non-Cursor
-harnesses. Cursor desktop, Cloud, and Grok Bot inherit account-level
+harnesses. Cursor desktop, Cursor Cloud, and Grok Bot inherit account-level
 **Connect** (Settings → Tools & MCP → teamshared → Connect). The plugin stays
 URL-only — do not paste a `tsk_*` key into the plugin `mcp.json` or
 `~/.cursor/mcp.json`.
+
+**One Connect, one org per repo.** Bind with `teamshared org bind <slug>`.
+Do not add a second TeamShared server. Unbound `/mcp` keeps working. Bots
+that must stay in one org use `teamshared token mint` (org-scoped seat key).
+See [`../AGENTS.md`](../AGENTS.md).
 
 Durable backup for other hosts: one org `tsk_` on the MCP headers
 (`Authorization: Bearer tsk_…`).
