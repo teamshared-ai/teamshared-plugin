@@ -6,7 +6,7 @@
 **Master:** [personal hub + personal and company orgs](https://teamshared.com/app/work/130df8db-4c2a-47e9-9d4f-c21466295ed5)
 **Attached to master:** [Decision: repo org binding (D1)](https://teamshared.com/app/files/a1d7703d-f571-49e8-a47f-6546d830f0df)
 **Depends:** C1 live on teamshared.com (`/o/{slug}/mcp`, [teamshared#417](https://github.com/teamshared-ai/teamshared/issues/417) / [PR #439](https://github.com/teamshared-ai/teamshared/pull/439))
-**Out of scope here:** D2 hook resolver wiring, D3 `org bind` / `unbind` CLI
+**Out of scope here:** D2 hook resolver wiring (shipped in #37), D3 `org bind` / `unbind` CLI
 
 This is a spike. It chooses the binding format and records how each harness
 can pick it up without loading a second TeamShared MCP server. It does not

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -407,6 +408,67 @@ class TokenResolutionTests(unittest.TestCase):
             with patch.dict(os.environ, {capture.CODEX_HOME_ENV: str(home)}, clear=True):
                 self.assertIsNone(capture.resolve_token())
         self.assertFalse(hasattr(capture, "_token_from_cursor_store"))
+
+
+def _git_repo(body: str | None) -> tuple[tempfile.TemporaryDirectory, Path]:
+    tmp = tempfile.TemporaryDirectory()
+    root = Path(tmp.name)
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True, capture_output=True)
+    if body is not None:
+        path = root / ".teamshared" / "org"
+        path.parent.mkdir(parents=True)
+        path.write_text(body, encoding="utf-8")
+    return tmp, root
+
+
+class OrgBindingCaptureTests(unittest.TestCase):
+    def _ensure_url(self, repo: Path) -> str:
+        calls: list[str | None] = []
+
+        def fake_call(
+            name: str,
+            arguments: dict,
+            token: str,
+            url: str | None = None,
+            timeout: float = 6,
+        ):
+            calls.append(url)
+            return {"session_id": "sess-org"}
+
+        payload = {"session_id": "thr_org", "cwd": str(repo)}
+        with tempfile.TemporaryDirectory() as cache_dir:
+            cache = Path(cache_dir) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(
+                        capture, "resolve_token", return_value="tsk_testtoken"
+                    ):
+                        sid = capture.ensure_session(
+                            payload, fresh=True, token="tsk_testtoken"
+                        )
+        self.assertEqual(sid, "sess-org")
+        self.assertEqual(len(calls), 1)
+        return calls[0] or ""
+
+    def test_bound_repo_captures_into_org(self) -> None:
+        tmp, root = _git_repo('{"v": 1, "slug": "sapien"}')
+        with tmp:
+            self.assertEqual(
+                capture.resolve_mcp_url({"cwd": str(root)}),
+                "https://teamshared.com/o/sapien/mcp",
+            )
+            self.assertEqual(
+                self._ensure_url(root), "https://teamshared.com/o/sapien/mcp"
+            )
+
+    def test_unbound_repo_captures_into_default_org(self) -> None:
+        tmp, root = _git_repo(None)
+        with tmp:
+            self.assertEqual(
+                capture.resolve_mcp_url({"cwd": str(root)}),
+                "https://teamshared.com/mcp",
+            )
+            self.assertEqual(self._ensure_url(root), "https://teamshared.com/mcp")
 
 
 class HooksManifestTests(unittest.TestCase):

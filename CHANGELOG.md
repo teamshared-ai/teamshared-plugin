@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **D2 capture follows bound org (#37):** hooks resolve `.teamshared/org`
+  via `scripts/org_binding.py` and POST transcripts to
+  `https://teamshared.com/o/{slug}/mcp`. Unbound or invalid bindings stay
+  on `https://teamshared.com/mcp`. Plugin MCP entries remain `/mcp` (no
+  second server). Cursor still reuses Connect; Claude/Codex hooks still
+  use `TEAMSHARED_TOKEN` or OAuth on the org path.
 - **D1 org binding spike (#36):** committed repo file `.teamshared/org`
   is the bind format. Decision and harness evidence in
   `docs/d1-org-binding.md`. Resolver contract in `scripts/org_binding.py`
