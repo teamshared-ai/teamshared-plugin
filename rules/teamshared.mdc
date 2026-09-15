@@ -1,12 +1,12 @@
 ---
 description: Use the teamshared MCP server as persistent cross-session memory.
 alwaysApply: true
-version: 1.27.0
+version: 1.28.0
 ---
 
 # teamshared Memory Protocol
 
-<!-- teamshared-rule-version: 1.27.0 -->
+<!-- teamshared-rule-version: 1.28.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -28,7 +28,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this rule's frontmatter `version` (`1.27.0`) as
+versions), call `version` with this rule's frontmatter `version` (`1.28.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
@@ -56,6 +56,10 @@ Run in order:
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Shell/Grep/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
 re-normalize teamshared MCP responses.
+
+`ensure` / `recall` / `remember` / `context_commit` / `work_*` writes return
+`org: {slug, name, kind}` and `bound` (`true` only on `/o/{slug}/mcp`). If
+`org` is not the user's org, say so and stop. Do not pass `org_id`.
 
 ## Fetch
 
@@ -86,16 +90,14 @@ tool output. Never store secrets, tokens, or credentials.
 
 The plugin also ships Cursor hooks that capture Agent Chat into TeamShared
 working memory (Connect token only, fail-open): `sessionStart` maps
-`conversation_id` → `memory_session_ensure` and injects soul/playbook
-as Cursor `additional_context` when present (capped, fail-open);
-`beforeSubmitPrompt` and
-`afterAgentResponse` append redacted user/assistant turns;
-`sessionEnd` closes and distills. `postToolUse` still writes a short
-episodic fact when a Shell test/lint/command fails; `preCompact` writes a
-short session summary. Hooks store the transcript; you still recall first
-and may `context_commit` curated facts. Do not re-append the same
-user/assistant text in the same turn. Cloud agents may skip `sessionStart`
-/ `sessionEnd` — later hooks still ensure + append.
+`conversation_id` → `memory_session_ensure`; `beforeSubmitPrompt` and
+`afterAgentResponse` append redacted user/assistant turns; `stop` notes
+abort/error only (does not distill every turn); `sessionEnd` closes and
+distills. `postToolUse` still writes a short episodic fact when a Shell
+test/lint/command fails; `preCompact` writes a short session summary. Hooks
+store the transcript; you still recall first and may `context_commit` curated
+facts. Do not re-append the same user/assistant text in the same turn. Cloud
+agents may skip `sessionStart` / `sessionEnd` — later hooks still ensure + append.
 
 **Durable `facts[]`** (still true next week; one dense paragraph; `subject` +
 tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /
@@ -163,7 +165,10 @@ Writes attribute to the authenticated identity.
 `errors_by_pillar` is non-empty (a pillar timed out or was unavailable).
 Treat that as partial — do not conclude "nothing known" from a thin result.
 Error values are stable codes (`unavailable`, `timeout`, `permission_denied`),
-not exception text. `GET /metrics` is unauthenticated and strips `org=` UUID
+not exception text. Optional `deadline_seconds` (or server
+`TEAMSHARED_RECALL_DEADLINE_SECONDS`) returns whatever finished in time
+with `timeout` on the rest instead of letting the MCP client kill the
+whole call. `GET /metrics` is unauthenticated and strips `org=` UUID
 labels; use `health` for connectivity, not metrics as a tenant-debug scrape.
 
 ## Never
@@ -174,4 +179,5 @@ labels; use `health` for connectivity, not metrics as a tenant-debug scrape.
 - Inventing Contact or Deal kinds — use Person / Organization / Project / WorkItem
 - Appending `[tool]` turns for teamshared MCP calls
 - Probing `TEAMSHARED_*` env vars in the shell — call `health`
+- Writing in an org the user did not mean — check `org.slug` / `org.name`
 - Storing secrets, tokens, credentials, or the `mcp_auth` login code
