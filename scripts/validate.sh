@@ -34,6 +34,10 @@ check "$ROOT/mcp.json"
 check "$ROOT/rules/teamshared.mdc"
 check "$ROOT/install/codex/mcp.toml"
 check "$ROOT/install/codex/README.md"
+check "$ROOT/docs/d1-org-binding.md"
+check "$ROOT/scripts/org_binding.py"
+check "$ROOT/scripts/test_org_binding.py"
+check "$ROOT/scripts/d1_harness_probe.sh"
 check "$ROOT/install/pi/mcp.json"
 check "$ROOT/install/hermes/mcp.yaml"
 check "$ROOT/install/hermes/capture.py"
@@ -451,6 +455,7 @@ PY
   python3 "$ROOT/hooks/test_capture.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
   python3 "$ROOT/plugins/teamshared/hooks/test_capture.py" -q
+  python3 "$ROOT/scripts/test_org_binding.py" -q
   python3 - <<'PY' "$ROOT/.agents/plugins/marketplace.json" "$ROOT/plugins/teamshared/.codex-plugin/plugin.json" "$ROOT/plugins/teamshared/.mcp.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md" "$ROOT/plugins/teamshared/skills/status/SKILL.md" "$ROOT/plugins/teamshared/hooks/hooks.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/agents/openai.yaml"
 import json, re, sys
 from pathlib import Path

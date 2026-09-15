@@ -1,0 +1,51 @@
+# D1 harness probe
+host=https://teamshared.com
+repo=/workspace
+
+## Local MCP / bind sources
+absent   /workspace/.teamshared/org
+absent   /workspace/.cursor/mcp.json
+absent   /home/ubuntu/.cursor/mcp.json
+present  /workspace/.mcp.json
+present  /workspace/mcp.json
+present  /workspace/claude/.mcp.json
+present  /workspace/plugins/teamshared/.mcp.json
+absent   /workspace/.codex/config.toml
+absent   /home/ubuntu/.codex/config.toml
+
+## Harness CLIs
+absent   claude
+absent   codex
+absent   cursor
+
+## C1 org MCP (unauthenticated)
+GET /mcp
+  401 www-authenticate: Bearer realm="teamshared", scope="mcp", resource_metadata="https://teamshared.com/.well-known/oauth-protected-resource" 
+  body={"error":"missing_bearer_token"}
+GET /o/sapien/mcp
+  401 www-authenticate: Bearer realm="teamshared", scope="mcp", resource_metadata="https://teamshared.com/.well-known/oauth-protected-resource" 
+  body={"error":"missing_bearer_token"}
+GET /o/does-not-exist-xyz/mcp
+  401 www-authenticate: Bearer realm="teamshared", scope="mcp", resource_metadata="https://teamshared.com/.well-known/oauth-protected-resource" 
+  body={"error":"missing_bearer_token"}
+
+## C2 org protected-resource metadata
+GET /.well-known/oauth-protected-resource -> 200
+  resource=https://teamshared.com/mcp
+  authorization_servers=['https://teamshared.com']
+GET /.well-known/oauth-protected-resource/mcp -> 200
+  resource=https://teamshared.com/mcp
+  authorization_servers=['https://teamshared.com']
+GET /.well-known/oauth-protected-resource/o/sapien/mcp -> 404
+  (non-JSON)
+
+## Resolver (this repo)
+{
+  "bound": false,
+  "slug": null,
+  "url": "https://teamshared.com/mcp",
+  "source": "/workspace/.teamshared/org",
+  "error": null
+}
+
+done
