@@ -391,7 +391,7 @@ def conversation_id(payload: dict[str, Any] | None = None) -> str | None:
             return val.strip()
     env = os.environ.get(CONVERSATION_ENV)
     if isinstance(env, str) and env.strip():
-            return env.strip()
+        return env.strip()
     return None
 
 
@@ -507,7 +507,7 @@ def resolve_token() -> str | None:
 
 def _parse_sse_json(raw: bytes) -> dict[str, Any]:
     text = raw.decode("utf-8", errors="replace")
-    if text.lstrip().startswith("{"):
+    if text.lstrip().startswith("{ "):
         try:
             parsed = json.loads(text)
             return parsed if isinstance(parsed, dict) else {}
