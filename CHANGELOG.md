@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **D5 unbound multi-org warning (protocol 1.29.0):** `rules/teamshared.mdc`
+  matches the server copy. Agents relay `memory_session_ensure` `warnings`
+  once per session and suggest `teamshared org bind <slug>`. Binding is
+  not required.
 - **D2 capture follows bound org (#37):** hooks resolve `.teamshared/org`
   via `scripts/org_binding.py` and POST transcripts to
   `https://teamshared.com/o/{slug}/mcp`. Unbound or invalid bindings stay
