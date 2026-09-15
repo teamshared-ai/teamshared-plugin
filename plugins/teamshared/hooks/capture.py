@@ -12,7 +12,7 @@ Auth for hook subprocesses (they cannot see Codex's in-process OAuth):
    ``install/codex/`` TOML path with this plugin.
 
 Keyring-only OAuth (no file fallback) is a documented gap: SessionStart still
-injects protocol 1.27.0; capture writes fail-open. Codex has no StopFailure
+injects protocol 1.28.0; capture writes fail-open. Codex has no StopFailure
 or PostToolUseFailure events.
 """
 
@@ -31,7 +31,7 @@ from typing import Any
 
 MCP_URL = "https://teamshared.com/mcp"
 PLUGIN_VERSION = "0.13.0"
-PROTOCOL_VERSION = "1.27.0"
+PROTOCOL_VERSION = "1.28.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900
