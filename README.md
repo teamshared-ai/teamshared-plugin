@@ -22,6 +22,11 @@ The public plugin / marketplace source is this repo
 ([`teamshared-ai/teamshared-plugin`](https://github.com/teamshared-ai/teamshared-plugin)).
 The remote MCP endpoint is [`https://teamshared.com/mcp`](https://teamshared.com/mcp).
 
+**One Connect, one org per repo.** Install the plugin once and connect once.
+Bind each checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
+Do not add a second TeamShared server. Unbound `/mcp` keeps working — it stays
+on the org chosen at Connect time. Agent-facing copy: [`AGENTS.md`](AGENTS.md).
+
 | Component | Purpose |
 |---|---|
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
@@ -43,7 +48,8 @@ The remote MCP endpoint is [`https://teamshared.com/mcp`](https://teamshared.com
 
 Cloud and Grok Bot agents inherit that account-level Connect. Installing the
 plugin registers `https://teamshared.com/mcp` — you only click **Connect**.
-Do not paste a URL or token into the plugin `mcp.json`.
+Do not paste a URL or token into the plugin `mcp.json`. Then bind the repo
+(`teamshared org bind <slug>`); do not add a second TeamShared server.
 
 See [MARKETPLACE.md](MARKETPLACE.md) for the official Marketplace publish checklist.
 
@@ -70,7 +76,9 @@ export TEAMSHARED_TOKEN=tsk_...   # mint under https://teamshared.com/app/keys
 ```
 
 Without it the hooks just no-op; the MCP connection and every-turn workflow
-work fine either way. `SessionStart` injects protocol 1.29.0;
+work fine either way. Bind the checkout with `teamshared org bind <slug>` so
+capture follows the org; do not add a project `.mcp.json` TeamShared server.
+Unbound `/mcp` keeps working. `SessionStart` injects protocol 1.29.0;
 `/teamshared:status` checks health + version. Details:
 [`claude/README.md`](claude/README.md).
 
@@ -86,6 +94,8 @@ codex plugin add teamshared@teamshared
 
 Restart the Codex app, start a new task, and connect TeamShared when prompted.
 Then review and trust plugin hooks with `/hooks` so capture writes run.
+Bind the checkout with `teamshared org bind <slug>`; do not add a second
+`[mcp_servers.teamshared]` next to the plugin. Unbound `/mcp` keeps working.
 `SessionStart` injects protocol 1.29.0; `$status` checks health + version.
 The package lives under [`plugins/teamshared/`](plugins/teamshared/) and is
 cataloged by [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
@@ -117,6 +127,7 @@ Install in Cursor:
 4. Settings → Tools & MCP → teamshared → Connect (email + one-time code)
 
 Cloud and Grok Bot agents inherit that Connect.
+Bind each repo with teamshared org bind; do not add a second server.
 ```
 
 ### From this repo (folder or symlink)
@@ -139,16 +150,24 @@ ln -sf "$(pwd)" ~/.cursor/plugins/local/teamshared
    Cursor opens a browser; sign in with the same email + one-time code as the
    web console (`/app`). The plugin already shipped the server URL; do not add
    headers or a `tsk_*` token to the plugin `mcp.json`.
-2. **Cloud / Grok Bot** — they inherit that account-level Cursor Connect. After
-   the one-time Connect, every cloud agent for that user gets TeamShared.
-3. **Developer: Reload Window** — confirm **Settings → MCP** shows `teamshared` enabled.
+2. **Bind the repo** — `teamshared org bind <slug>` writes `.teamshared/org`
+   (`{"v":1,"slug"}`). Commit that file. Capture follows it. Do not add a
+   second TeamShared server in `.cursor/mcp.json`, project `.mcp.json`, or
+   Codex `config.toml`.
+3. **Cursor Cloud / Grok Bot** — they inherit that account-level Cursor
+   Connect. After the one-time Connect, every cloud agent for that user gets
+   TeamShared. Bind still lives in the checkout (`.teamshared/org`); Cloud
+   does not take a second MCP URL from repo config. Unbound `/mcp` keeps
+   working (Connect-time org).
+4. **Developer: Reload Window** — confirm **Settings → MCP** shows `teamshared` enabled.
 
 If you previously added `https://teamshared.com/mcp` by hand, remove that
 manual entry so you do not get two `teamshared` servers.
 
-Durable backup: one org `tsk_` on the MCP headers (`Authorization: Bearer tsk_…`)
-for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
-`/app/keys`.
+Bots that must stay in one org use a seat key — `teamshared token mint`
+scoped to that org, or mint under `/app/keys` — on the MCP headers
+(`Authorization: Bearer tsk_…`). Not in the plugin `mcp.json`. Unbound
+`/mcp` keeps working for interactive Connect.
 
 ## What you get
 
@@ -173,6 +192,38 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
   `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
   Agents still recall first and may commit curated facts; hooks store the
   transcript.
+
+## Bind a repo to an org
+
+One TeamShared server stays on `https://teamshared.com/mcp`. The repo file
+chooses the org; capture follows it. Do not add a second TeamShared server.
+
+```bash
+teamshared org bind sapien --token "$TEAMSHARED_TOKEN"
+teamshared org status
+teamshared org unbind
+```
+
+`bind` checks membership, then writes only `.teamshared/org`:
+
+```json
+{"v":1,"slug":"sapien"}
+```
+
+The derived URL `https://teamshared.com/o/{slug}/mcp` is never stored. Commit
+the file so every harness in the checkout sees the same org. `status` and
+`unbind` work offline. Missing or invalid file → unbound `/mcp` (Connect-time
+org). That is supported; binding is not required.
+
+| Harness | Connect once | Bind | Do not |
+|---|---|---|---|
+| **Cursor** | Settings → Tools & MCP → teamshared → Connect | `.teamshared/org`; hooks POST to the org URL with the same Connect token | `.cursor/mcp.json` / project MCP twin |
+| **Cursor Cloud** | Inherited account Connect | Same checkout file; hooks follow it | Repo MCP URL as a Cloud bind path |
+| **Claude Code** | `/mcp` → Authenticate | Same file; hooks use an org-scoped `TEAMSHARED_TOKEN` | Project `.mcp.json` TeamShared server |
+| **Codex** | Plugin OAuth (or manual `tsk_` — not both) | Same file | `[mcp_servers.teamshared]` next to the plugin |
+
+Bots that must stay in one org: `teamshared token mint <agent>` (org-scoped
+seat key) or `/app/keys`. Still one server.
 
 The Cursor plugin still has no skills, slash commands, or extra agents.
 The Claude Code package ships protocol **1.29.0** (`teamshared-memory`),
@@ -208,9 +259,13 @@ Or merge [`install/codex/mcp.toml`](install/codex/mcp.toml) into project-local
 [`install/codex/README.md`](install/codex/README.md).
 
 Use either the native marketplace plugin or the manual TOML entry, not both.
+The manual path is the seat-key path for bots that must stay in one org
+(`teamshared token mint` scoped to that org). Do not add a second TeamShared
+server next to the plugin. Bind the checkout with `teamshared org bind <slug>`
+either way; unbound `/mcp` keeps working.
 
-Cursor desktop, Cloud, and Grok Bot still use **Connect** — do not add this
-`tsk_` block to the plugin `mcp.json`.
+Cursor desktop, Cursor Cloud, and Grok Bot still use **Connect** — do not add
+this `tsk_` block to the plugin `mcp.json`.
 
 ## License
 
