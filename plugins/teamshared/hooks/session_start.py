@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Codex SessionStart — inject protocol 1.27.0 and ensure a working session."""
+"""Codex SessionStart — inject protocol 1.28.0 and ensure a working session."""
 
 from __future__ import annotations
 
