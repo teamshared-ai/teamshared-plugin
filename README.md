@@ -157,7 +157,10 @@ for CI and other harnesses — not in the plugin `mcp.json`. Mint keys under
 - **Cursor hooks**: Agent Chat turns are appended to TeamShared in
   near-real-time without waiting for the agent to call
   `memory_session_ensure` / `context_commit`. `sessionStart` maps
-  `conversation_id` onto a working session; `beforeSubmitPrompt` and
+  `conversation_id` onto a working session and, after a successful
+  ensure, injects a capped Cursor `additional_context` block (linked
+  soul and a short playbook header when present — not recall catalogs
+  or transcripts). Fail-open on MCP/auth errors. `beforeSubmitPrompt` and
   `afterAgentResponse` append redacted user/assistant text; `sessionEnd`
   closes and distills. `stop` only notes aborted/error loops (it fires
   after every turn, so it does not distill). `postToolUse` still appends a

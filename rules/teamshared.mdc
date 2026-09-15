@@ -86,7 +86,9 @@ tool output. Never store secrets, tokens, or credentials.
 
 The plugin also ships Cursor hooks that capture Agent Chat into TeamShared
 working memory (Connect token only, fail-open): `sessionStart` maps
-`conversation_id` → `memory_session_ensure`; `beforeSubmitPrompt` and
+`conversation_id` → `memory_session_ensure` and injects soul/playbook
+as Cursor `additional_context` when present (capped, fail-open);
+`beforeSubmitPrompt` and
 `afterAgentResponse` append redacted user/assistant turns;
 `sessionEnd` closes and distills. `postToolUse` still writes a short
 episodic fact when a Shell test/lint/command fails; `preCompact` writes a

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cursor sessionStart — map conversation_id → TeamShared working session."""
+"""Cursor sessionStart — map conversation_id → session; inject additional_context."""
 
 from __future__ import annotations
 

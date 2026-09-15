@@ -4,6 +4,9 @@ Stdlib only. Best-effort: never block the agent loop. Writes go through the
 hosted TeamShared MCP (memory_session_ensure + memory_session_append +
 context_commit + memory_session_close) using the existing Cursor Connect
 token when we can find it — not a tsk_ in mcp.json.
+
+sessionStart also injects a capped additional_context block from the
+ensure payload (soul / playbook header / optional profile) when useful.
 """
 
 from __future__ import annotations
@@ -27,6 +30,9 @@ MAX_SUMMARY_CHARS = 900
 MAX_FACT_CHARS = 1000
 MAX_TURN_CHARS = 4000
 MAX_TOPIC_CHARS = 200
+MAX_BOOTSTRAP_CHARS = 3500
+MAX_PLAYBOOK_HEADER_CHARS = 1200
+MAX_PROFILE_CHARS = 800
 MCP_TIMEOUT_SEC = 8
 HOOK_CACHE_ENV = "TEAMSHARED_HOOK_CACHE"
 SESSION_ENV = "TEAMSHARED_SESSION_ID"
@@ -669,34 +675,106 @@ def mcp_call(name: str, arguments: dict[str, Any], token: str, url: str = MCP_UR
     return inner if isinstance(inner, dict) else result or {}
 
 
-def _session_id_from_result(result: dict[str, Any] | None) -> str | None:
-    if not result:
-        return None
-    for key in ("session_id", "sessionId"):
-        val = result.get(key)
-        if isinstance(val, str) and val.strip():
-            return val.strip()
-    structured = result.get("structuredContent")
-    if isinstance(structured, dict):
-        for key in ("session_id", "sessionId"):
-            val = structured.get(key)
-            if isinstance(val, str) and val.strip():
-                return val.strip()
+def _parsed_json_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except ValueError:
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
+
+def _tool_payload(result: dict[str, Any] | None) -> dict[str, Any]:
+    """Unwrap MCP tools/call envelopes to the memory_session_ensure object."""
+    if not isinstance(result, dict) or not result:
+        return {}
+    structured = _parsed_json_dict(result.get("structuredContent"))
+    if structured:
+        return structured
     for item in result.get("content") or []:
         if not isinstance(item, dict):
             continue
-        text = item.get("text")
-        if not isinstance(text, str):
-            continue
-        try:
-            parsed = json.loads(text)
-        except ValueError:
-            continue
-        if isinstance(parsed, dict):
-            val = parsed.get("session_id") or parsed.get("sessionId")
+        parsed = _parsed_json_dict(item.get("text"))
+        if parsed:
+            return parsed
+    return result
+
+
+def _session_id_from_result(result: dict[str, Any] | None) -> str | None:
+    payload = _tool_payload(result)
+    for key in ("session_id", "sessionId"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
+
+
+def _nonempty_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    return ""
+
+
+def _soul_text(value: Any) -> str:
+    text = _nonempty_text(value)
+    if text:
+        return text
+    if isinstance(value, dict):
+        return _nonempty_text(value.get("body_md") or value.get("text"))
+    return ""
+
+
+def _playbook_header(playbook: Any) -> str:
+    if not isinstance(playbook, dict):
+        return ""
+    name = _nonempty_text(playbook.get("name")) or _nonempty_text(playbook.get("slug"))
+    body = _nonempty_text(playbook.get("body_md") or playbook.get("body"))
+    if not name and not body:
+        return ""
+    title = name or "Playbook"
+    lines = [f"## Playbook: {title}"]
+    if body:
+        lines.append(clamp(body, MAX_PLAYBOOK_HEADER_CHARS))
+    return "\n".join(lines)
+
+
+def _profile_text(profile: Any) -> str:
+    if isinstance(profile, str):
+        return profile.strip()
+    if isinstance(profile, dict):
+        for key in ("text", "body_md", "markdown", "summary", "body"):
+            val = profile.get(key)
             if isinstance(val, str) and val.strip():
                 return val.strip()
-    return None
+    return ""
+
+
+def bootstrap_additional_context(ensured: dict[str, Any] | None) -> str:
+    """Compact soul / playbook / optional profile for Cursor additional_context.
+
+    Uses only fields already on a successful memory_session_ensure payload.
+    Never dumps recall catalogs, skill libraries, or session transcripts.
+    Empty when there is nothing useful to inject.
+    """
+    payload = _tool_payload(ensured)
+    parts: list[str] = []
+    soul = _soul_text(payload.get("soul"))
+    if soul:
+        parts.append(f"## Soul\n{soul}")
+    playbook = _playbook_header(payload.get("playbook"))
+    if playbook:
+        parts.append(playbook)
+    profile = _profile_text(payload.get("profile") or payload.get("bootstrap"))
+    if profile:
+        parts.append(f"## Profile\n{clamp(profile, MAX_PROFILE_CHARS)}")
+    if not parts:
+        return ""
+    text = "# TeamShared\n\n" + "\n\n".join(parts)
+    return clamp(strip_secrets(text), MAX_BOOTSTRAP_CHARS)
 
 
 def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | None]:
@@ -705,14 +783,14 @@ def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | 
     return repo_slug(cwd), github, conversation_id(payload)
 
 
-def ensure_session(
+def ensure_session_payload(
     payload: dict[str, Any] | None = None,
     *,
     fresh: bool = False,
     user: str | None = None,
     token: str | None = None,
-) -> str | None:
-    """Map this Cursor conversation onto a TeamShared working session."""
+) -> dict[str, Any] | None:
+    """Call memory_session_ensure and persist the conversation→session map."""
     token = token if token is not None else resolve_token()
     if not token:
         return None
@@ -735,7 +813,24 @@ def ensure_session(
     session_id = _session_id_from_result(ensured) or (cached if not fresh else None)
     if session_id:
         store_mapped_session(cid, session_id)
-    return session_id
+    if ensured:
+        return _tool_payload(ensured) or ensured
+    if session_id:
+        return {"session_id": session_id}
+    return None
+
+
+def ensure_session(
+    payload: dict[str, Any] | None = None,
+    *,
+    fresh: bool = False,
+    user: str | None = None,
+    token: str | None = None,
+) -> str | None:
+    """Map this Cursor conversation onto a TeamShared working session."""
+    return _session_id_from_result(
+        ensure_session_payload(payload, fresh=fresh, user=user, token=token)
+    )
 
 
 def append_turn(
@@ -837,16 +932,27 @@ def ingest(
 
 
 def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
-    session_id = ensure_session(payload, fresh=True)
     extra: dict[str, Any] = {}
     env: dict[str, str] = {}
     cid = conversation_id(payload)
     if cid:
         env[CONVERSATION_ENV] = cid
+    ensured: dict[str, Any] | None = None
+    try:
+        ensured = ensure_session_payload(payload, fresh=True)
+    except Exception:
+        ensured = None
+    session_id = _session_id_from_result(ensured)
     if session_id:
         env[SESSION_ENV] = session_id
     if env:
         extra["env"] = env
+    try:
+        context = bootstrap_additional_context(ensured)
+    except Exception:
+        context = ""
+    if context:
+        extra["additional_context"] = context
     return extra
 
 
