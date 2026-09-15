@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.28.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.29.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Codex)
 
-<!-- teamshared-rule-version: 1.28.0 -->
+<!-- teamshared-rule-version: 1.29.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -23,7 +23,7 @@ server). Bind the checkout with `teamshared org bind <slug>`. Unbound `/mcp`
 keeps working. Point humans at the console (`/app`) for sign-in, wiki,
 people, and keys.
 
-This skill is protocol **1.28.0** — the same fetch/store loop as
+This skill is protocol **1.29.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex
 (OAuth MCP, `AGENTS.md` version notes, official Codex hooks). SessionStart
 also injects the every-turn loop so recall/commit runs without the user
@@ -36,7 +36,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.28.0`) as
+versions), call `version` with this skill's protocol version (`1.29.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, tell the user a newer protocol exists and that they
 should upgrade this marketplace plugin. Codex has no Cursor `.mdc` or Claude
@@ -66,7 +66,9 @@ Run in order:
 
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
-re-normalize teamshared MCP responses.
+re-normalize teamshared MCP responses. If `memory_session_ensure` returns
+`warnings`, relay them once this session (suggest `teamshared org bind <slug>`).
+Do not require a bind.
 
 ## Fetch
 
