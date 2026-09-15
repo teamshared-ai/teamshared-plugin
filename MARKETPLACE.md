@@ -38,7 +38,8 @@ hooks). Keep that OAuth path separate from `install/codex/` (`tsk_`).
 4. **Settings → Tools & MCP → teamshared → Connect** and sign in with email +
    one-time code (same as the web console). Cloud and Grok Bot agents inherit
    that account-level Connect. No URL or bearer token to paste, and do not put
-   a key in the plugin `mcp.json`.
+   a key in the plugin `mcp.json`. Then `teamshared org bind <slug>`
+   (`.teamshared/org`). Do not add a second TeamShared server. Unbound `/mcp` keeps working.
 
 5. **Developer: Reload Window** — confirm **Settings → MCP** shows `teamshared`.
 
@@ -68,8 +69,11 @@ Symlink load uses `.cursor-plugin/plugin.json` only; no catalog is required.
 
 Sign-in is self-service: any email + a one-time passcode (first sign-in creates
 your own org). After Connect, every cloud agent for that user gets TeamShared.
-Durable backup: one org `tsk_` on the MCP headers (`Authorization: Bearer tsk_…`)
-— not in the plugin `mcp.json`. Mint keys under `/app/keys`.
+Bind each repo with `teamshared org bind <slug>` (`.teamshared/org`). Do not
+add a second TeamShared server. Unbound `/mcp` keeps working. Bots that must
+stay in one org: `teamshared token mint` (org-scoped seat key) or `/app/keys`
+on the MCP headers (`Authorization: Bearer tsk_…`) — not in the plugin
+`mcp.json`.
 
 ## Publish to Cursor Marketplace (official listing)
 
@@ -119,8 +123,11 @@ or extra agents.
 
 After install, connect with email and a one-time code under Settings →
 Tools & MCP → teamshared → Connect (same as the web console). Cloud and
-Grok Bot agents inherit that account-level Connect. The hooks reuse that
-Connect session — do not paste a key into the plugin.
+Grok Bot agents inherit that account-level Connect. Bind each repo with
+`teamshared org bind` (`.teamshared/org`). Do not add a second TeamShared
+server. Unbound `/mcp` keeps working. Bots that must stay in one org use
+`teamshared token mint`. The hooks reuse that Connect session — do not
+paste a key into the plugin.
 ```
 
 ## Claude Code marketplace
@@ -133,10 +140,12 @@ Users add this repo as a Claude Code marketplace (catalog at
 /plugin install teamshared@teamshared
 ```
 
-Auth is `TEAMSHARED_TOKEN` (`tsk_…` bearer on the MCP headers). Claude
-Code does not inherit Cursor Connect. Never commit the key. After install,
-`/reload-plugins`, confirm `/mcp`, then `/teamshared:status`. See
-[`claude/README.md`](claude/README.md).
+Auth is Claude Code's native `/mcp` → Authenticate (email/OTP). Capture
+hooks optionally use `TEAMSHARED_TOKEN` from `teamshared token mint` (org-scoped
+seat key) or `/app/keys`. Never commit the key. Bind the checkout with
+`teamshared org bind <slug>` (`.teamshared/org`). Do not add a second TeamShared server.
+Unbound `/mcp` keeps working. After install, `/reload-plugins`, confirm `/mcp`,
+then `/teamshared:status`. See [`claude/README.md`](claude/README.md).
 
 ## Codex marketplace
 
@@ -150,7 +159,9 @@ codex plugin add teamshared@teamshared
 ```
 
 Auth is MCP OAuth discovery (no token in `.mcp.json`). After install, connect
-when prompted, trust hooks with `/hooks`, then `$status`. Codex has no
+when prompted, trust hooks with `/hooks`, bind with `teamshared org bind <slug>`
+(`.teamshared/org`), then `$status`. Do not add a second TeamShared server.
+Unbound `/mcp` keeps working. Codex has no
 `StopFailure` or `PostToolUseFailure`. See
 [`plugins/teamshared/README.md`](plugins/teamshared/README.md). Do not also
 install [`install/codex/`](install/codex/README.md).
@@ -164,7 +175,7 @@ teamshared-plugin/
 │   └── plugin.json
 ├── .claude-plugin/
 │   └── marketplace.json   # Claude Code catalog: source ./claude
-├── claude/                # Claude Code plugin (MCP + 1.28 protocol + capture hooks)
+├── claude/                # Claude Code plugin (MCP + 1.29 protocol + capture hooks)
 ├── plugin.json            # Agent Plugins 1.0.0 / cursor.directory discovery
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
@@ -173,13 +184,14 @@ teamshared-plugin/
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── .agents/plugins/
 │   └── marketplace.json   # Codex catalog: source ./plugins/teamshared
-├── plugins/teamshared/    # Codex plugin (OAuth MCP + 1.28 protocol + capture hooks)
+├── plugins/teamshared/    # Codex plugin (OAuth MCP + 1.29 protocol + capture hooks)
 │   ├── .codex-plugin/plugin.json  # interface.logo + composerIcon
 │   └── assets/logo.png / icon.png  # ChatGPT Sources + Codex directory
 ├── install/codex/         # Codex: mcp add + .codex/config.toml (tsk_ via env; do not mix)
 ├── assets/logo.png        # 512×512 brand mark (Cursor UI)
 ├── assets/logo.svg
 ├── README.md
+├── AGENTS.md
 ├── CHANGELOG.md
 └── LICENSE
 ```
