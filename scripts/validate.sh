@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Structural checks for the Cursor plugin (MCP + recall rule + chat-capture hooks),
-# Claude Code marketplace package (MCP + 1.27 skill + official capture hooks),
-# and native Codex marketplace package (OAuth MCP + 1.27 skill + official capture hooks).
+# Claude Code marketplace package (MCP + 1.28 skill + official capture hooks),
+# and native Codex marketplace package (OAuth MCP + 1.28 skill + official capture hooks).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -415,7 +415,7 @@ from pathlib import Path
 skill = Path(claude_skill_path).read_text()
 status = Path(claude_status_path).read_text()
 for needle in (
-    "1.27.0",
+    "1.28.0",
     "work_id",
     "playbook_slug",
     "soul",
@@ -443,10 +443,10 @@ if re.search(r"tsk_[A-Za-z0-9]", skill) or re.search(r"tsk_[A-Za-z0-9]", status)
 if "name: status" not in status or "health" not in status:
     print("FAIL  Claude /teamshared:status skill is incomplete")
     sys.exit(1)
-if "1.27.0" not in status:
-    print("FAIL  Claude status skill must mention protocol 1.27.0")
+if "1.28.0" not in status:
+    print("FAIL  Claude status skill must mention protocol 1.28.0")
     sys.exit(1)
-print("ok  Claude teamshared-memory 1.27.0 + status skill")
+print("ok  Claude teamshared-memory 1.28.0 + status skill")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
@@ -613,7 +613,7 @@ skill = skill_path.read_text()
 status = status_path.read_text()
 openai_yaml = openai_yaml_path.read_text()
 for needle in (
-    "1.27.0",
+    "1.28.0",
     "work_id",
     "playbook_slug",
     "soul",
@@ -646,13 +646,13 @@ if re.search(r"tsk_[A-Za-z0-9]", skill) or re.search(r"tsk_[A-Za-z0-9]", status)
 if "name: status" not in status or "health" not in status:
     print("FAIL  Codex $status skill is incomplete")
     sys.exit(1)
-if "1.27.0" not in status:
-    print("FAIL  Codex status skill must mention protocol 1.27.0")
+if "1.28.0" not in status:
+    print("FAIL  Codex status skill must mention protocol 1.28.0")
     sys.exit(1)
 if "allow_implicit_invocation: true" not in openai_yaml:
     print("FAIL  Codex openai.yaml must allow implicit skill invocation")
     sys.exit(1)
-print("ok  Codex teamshared-memory 1.27.0 + status skill")
+print("ok  Codex teamshared-memory 1.28.0 + status skill")
 PY
 else
   echo "skip JSON parse (python3 not found)"
@@ -700,7 +700,7 @@ if ! grep -q "SessionStart" "$ROOT/README.md" \
   || ! grep -q "StopFailure" "$ROOT/plugins/teamshared/README.md" \
   || ! grep -q "keyring" "$ROOT/plugins/teamshared/README.md" \
   || ! grep -q "/hooks" "$ROOT/plugins/teamshared/README.md" \
-  || ! grep -q "1.27.0" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "1.28.0" "$ROOT/plugins/teamshared/README.md" \
   || ! grep -q '~/.codex/AGENTS.md' "$ROOT/plugins/teamshared/README.md"; then
   echo "FAIL  README files must document Codex SessionStart, capture vs Claude, /hooks trust, and AGENTS.md"
   FAIL=1
@@ -783,13 +783,13 @@ fi
 if ! grep -q 'SessionStart' "$ROOT/claude/README.md" \
   || ! grep -q 'UserPromptSubmit' "$ROOT/claude/README.md" \
   || ! grep -q 'PostToolUseFailure' "$ROOT/claude/README.md" \
-  || ! grep -q '1.27.0' "$ROOT/claude/README.md" \
+  || ! grep -q '1.28.0' "$ROOT/claude/README.md" \
   || ! grep -q '/teamshared:status' "$ROOT/claude/README.md" \
   || ! grep -q '~/.claude/rules/teamshared.md' "$ROOT/claude/README.md"; then
-  echo "FAIL  claude/README.md must document official hooks, 1.27.0, status, and the Claude write path"
+  echo "FAIL  claude/README.md must document official hooks, 1.28.0, status, and the Claude write path"
   FAIL=1
 else
-  echo "ok  docs  claude/README hooks + 1.27.0"
+  echo "ok  docs  claude/README hooks + 1.28.0"
 fi
 
 if command -v python3 >/dev/null 2>&1; then
@@ -811,8 +811,8 @@ if front.group(1) != comment.group(1):
     )
     sys.exit(1)
 rule_version = front.group(1)
-if rule_version != "1.27.0":
-    print(f"FAIL  rules/teamshared.mdc must be protocol 1.27.0, got {rule_version}")
+if rule_version != "1.28.0":
+    print(f"FAIL  rules/teamshared.mdc must be protocol 1.28.0, got {rule_version}")
     sys.exit(1)
 if "two Cursor hooks" in rule:
     print("FAIL  rules/teamshared.mdc must not copy the 1.26.0 two-hooks paragraph")
