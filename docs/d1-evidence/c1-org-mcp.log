@@ -1,0 +1,38 @@
+# C1 live probe — 2026-09-15T16:01:16Z — teamshared.com
+# Command: curl -sS -D - against /mcp, /o/{slug}/mcp, and PRM paths.
+# This VM has no tsk_ / Connect token to send; unauthenticated is enough
+# to show the org path is mounted next to /mcp (C1) and org PRM is not (C2).
+
+GET /mcp
+HTTP/2 401
+content-type: application/json
+www-authenticate: Bearer realm="teamshared", scope="mcp", resource_metadata="https://teamshared.com/.well-known/oauth-protected-resource"
+body: {"error":"missing_bearer_token"}
+
+GET /o/sapien/mcp
+HTTP/2 401
+content-type: application/json
+www-authenticate: Bearer realm="teamshared", scope="mcp", resource_metadata="https://teamshared.com/.well-known/oauth-protected-resource"
+body: {"error":"missing_bearer_token"}
+
+GET /o/does-not-exist-xyz/mcp
+HTTP/2 401
+content-type: application/json
+www-authenticate: Bearer realm="teamshared", scope="mcp", resource_metadata="https://teamshared.com/.well-known/oauth-protected-resource"
+body: {"error":"missing_bearer_token"}
+
+# Membership 403 (identical body for unknown slug vs non-member) is after
+# auth. Unauthenticated unknown slugs look like /mcp — no slug leak.
+
+GET /.well-known/oauth-protected-resource          -> 200
+  resource=https://teamshared.com/mcp
+  authorization_servers=['https://teamshared.com']
+  scopes_supported=['mcp']
+
+GET /.well-known/oauth-protected-resource/mcp      -> 200
+  resource=https://teamshared.com/mcp
+
+GET /.well-known/oauth-protected-resource/o/sapien/mcp -> 404 (HTML console page)
+
+# Finding: C1 routing is live. C2 path-specific OAuth discovery is not.
+# A new Connect aimed at /o/{slug}/mcp still discovers the /mcp resource.

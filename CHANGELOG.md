@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **D1 org binding spike (#36):** committed repo file `.teamshared/org`
+  is the bind format. Decision and harness evidence in
+  `docs/d1-org-binding.md`. Resolver contract in `scripts/org_binding.py`
+  (D2/D3). Do not write a second TeamShared server into
+  `.cursor/mcp.json`, project `.mcp.json`, or `.codex/config.toml`.
 - **README:** public install/source no longer claims the MCP server
   lives in `teamshared-ai/teamshared` (that GitHub repo is private and
   404s). Canonical set is [teamshared.com/#connect](https://teamshared.com/#connect),
