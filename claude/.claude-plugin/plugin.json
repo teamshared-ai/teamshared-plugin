@@ -3,7 +3,7 @@
   "name": "teamshared",
   "displayName": "TeamShared",
   "version": "0.13.0",
-  "description": "Shared team memory for Claude Code: remote MCP at https://teamshared.com/mcp, TEAMSHARED_TOKEN auth, recall-first protocol 1.28.0, SessionStart injection, and chat-capture hooks.",
+  "description": "Shared team memory for Claude Code: remote MCP at https://teamshared.com/mcp, TEAMSHARED_TOKEN auth, recall-first protocol 1.29.0, SessionStart injection, and chat-capture hooks.",
   "author": {
     "name": "Loreum Labs Ltd"
   },
