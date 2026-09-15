@@ -81,7 +81,7 @@ Cursor Connect. Do not call `mcp_auth` as the first hop. Never store secrets,
 tokens, or credentials. Follow the `teamshared-memory` skill (protocol {PROTOCOL_VERSION})
 for fetch/store, CRM, and version updates.
 
-Unsure which tool? Call `memory_tools_catalog(need=\"<intent>\")`.
+Unsure which tool? Call `memory_tools_catalog(need="<intent>")`.
 
 ## Every turn
 
