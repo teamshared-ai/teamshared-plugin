@@ -15,6 +15,13 @@ org key in `TEAMSHARED_TOKEN` to do anything — without it they simply no-op
 This package is Claude Code only. The Cursor plugin at the repo root is
 unchanged (email/OTP Connect + Cursor hook event names).
 
+**One Connect, one org per repo.** Authenticate once via `/mcp`. Bind the
+checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
+Capture follows that file. Do not add a second TeamShared server (no project
+`.mcp.json` TeamShared entry). Unbound `/mcp` keeps working. Bots that must
+stay in one org use `teamshared token mint` (org-scoped seat key) as
+`TEAMSHARED_TOKEN` for the hooks.
+
 ## Install
 
 From Claude Code:
@@ -51,8 +58,10 @@ you want them capturing chat automatically, mint an org key and export it in
 the environment that launches Claude Code:
 
 1. Sign in at [teamshared.com/app](https://teamshared.com/app) (email + one-time code).
-2. Mint an org key under `/app/keys`. It starts with `tsk_`.
-3. Export it — do not paste it into this plugin's `.mcp.json`.
+2. Mint an org-scoped seat key (`teamshared token mint <agent>` or `/app/keys`).
+   It starts with `tsk_`.
+3. Export it — do not paste it into this plugin's `.mcp.json`. Bind the
+   repo with `teamshared org bind <slug>`. Do not add a second TeamShared server.
 
 ```bash
 export TEAMSHARED_TOKEN=tsk_...

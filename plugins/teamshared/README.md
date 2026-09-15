@@ -9,7 +9,15 @@ Authentication uses the MCP OAuth discovery metadata published by
 
 The Cursor plugin at the repo root is unchanged (email/OTP Connect + Cursor
 hook event names). Claude Code lives under `claude/` and uses
-`TEAMSHARED_TOKEN`.
+`TEAMSHARED_TOKEN` for capture hooks.
+
+**One Connect, one org per repo.** Connect when Codex prompts. Bind the
+checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
+Capture follows that file. Do not add a second TeamShared server
+(`[mcp_servers.teamshared]` next to this plugin). Unbound `/mcp` keeps working.
+Bots that must stay in one org use the manual
+[`install/codex/`](../../install/codex/README.md) path with
+`teamshared token mint` (org-scoped seat key) — not both.
 
 ## Install from the repository marketplace
 
@@ -34,7 +42,9 @@ Then:
 
 For a manual `config.toml` installation instead, use
 [`install/codex/README.md`](../../install/codex/README.md). That alternative
-uses `TEAMSHARED_TOKEN` and should not be installed alongside this plugin.
+uses `TEAMSHARED_TOKEN` from `teamshared token mint` (org-scoped) and
+should not be installed alongside this plugin. Bind either path with
+`teamshared org bind <slug>`.
 
 ## Package contents
 
