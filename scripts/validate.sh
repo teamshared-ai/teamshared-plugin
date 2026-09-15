@@ -852,6 +852,31 @@ else
   echo "skip protocol drift check (python3 not found)"
 fi
 
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY' "$ROOT/README.md"
+import re
+import sys
+from pathlib import Path
+
+readme = Path(sys.argv[1]).read_text(encoding="utf-8")
+private = re.compile(r"github\.com/teamshared-ai/teamshared(?!-plugin)")
+if private.search(readme):
+    print("FAIL  README.md must not link github.com/teamshared-ai/teamshared (private 404)")
+    sys.exit(1)
+for needle in (
+    "https://teamshared.com/#connect",
+    "https://github.com/teamshared-ai/teamshared-plugin",
+    "https://teamshared.com/mcp",
+):
+    if needle not in readme:
+        print(f"FAIL  README.md must name canonical public URL {needle!r}")
+        sys.exit(1)
+print("ok  docs  README public install/source URLs")
+PY
+else
+  echo "skip README public URL check (python3 not found)"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "Validation failed."
   exit 1

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **README:** public install/source no longer claims the MCP server
+  lives in `teamshared-ai/teamshared` (that GitHub repo is private and
+  404s). Canonical set is [teamshared.com/#connect](https://teamshared.com/#connect),
+  this plugin repo, and `https://teamshared.com/mcp`.
 - **Cursor sessionStart additional_context (#33):** after a successful
   `memory_session_ensure`, the Cursor hook emits Mem0-style
   `{ "additional_context": "..." }` with the linked soul (when
@@ -85,11 +89,12 @@
   `teamshared-ai/teamshared` (was `xhad/teamshared`). Historical
   changelog copy-from lines and the `io.github.xhad/teamshared`
   registry listing are unchanged.
-- **README:** live MCP server pointer is
-  [`teamshared-ai/teamshared`](https://github.com/teamshared-ai/teamshared)
-  (the product repo moved from `xhad/teamshared`). Historical changelog
-  copy-from lines and the `io.github.xhad/teamshared` registry listing are
-  unchanged.
+- **README:** historical note — an earlier live pointer named
+  `teamshared-ai/teamshared` after the `xhad/teamshared` transfer.
+  That checkout is private (public 404). Public install/source is
+  `#connect` and this plugin repo; remote MCP is
+  `https://teamshared.com/mcp`. Historical changelog copy-from lines
+  and the `io.github.xhad/teamshared` registry listing are unchanged.
 - **Native Codex marketplace plugin:** `.agents/plugins/marketplace.json`
   catalogs `plugins/teamshared/` for
   `codex plugin marketplace add teamshared-ai/teamshared-plugin` and
@@ -176,7 +181,8 @@
 - **Own repo:** plugin lives at [`teamshared-ai/teamshared-plugin`](https://github.com/teamshared-ai/teamshared-plugin)
   (this repository; moved from `xhad/teamshared-cursor`). Add marketplace
   `https://github.com/teamshared-ai/teamshared-plugin`, then `/add-plugin teamshared`.
-  The MCP server remains [`xhad/teamshared`](https://github.com/xhad/teamshared).
+  The MCP server was historically `xhad/teamshared` (private checkout;
+  public install is [teamshared.com/#connect](https://teamshared.com/#connect)).
 - **Folder marketplace:** `.cursor-plugin/marketplace.json` with `"source": "./"`
   so Cursor **Add plugins from folder** accepts this repo root.
 - **Rule 1.14.0:** every-turn `memory_session_ensure(..., user=request)` (no
