@@ -48,6 +48,7 @@ check "$ROOT/assets/logo.png"
 check "$ROOT/assets/logo.svg"
 check "$ROOT/LICENSE"
 check "$ROOT/README.md"
+check "$ROOT/AGENTS.md"
 check "$ROOT/CHANGELOG.md"
 check "$ROOT/hooks/hooks.json"
 check "$ROOT/hooks/capture.py"
@@ -917,6 +918,71 @@ print("ok  docs  README public install/source URLs")
 PY
 else
   echo "skip README public URL check (python3 not found)"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY' "$ROOT"
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+docs = {
+    "README.md": root / "README.md",
+    "AGENTS.md": root / "AGENTS.md",
+    "install/README.md": root / "install" / "README.md",
+    "install/codex/README.md": root / "install" / "codex" / "README.md",
+    "claude/README.md": root / "claude" / "README.md",
+    "plugins/teamshared/README.md": root / "plugins" / "teamshared" / "README.md",
+    "MARKETPLACE.md": root / "MARKETPLACE.md",
+}
+required_everywhere = (
+    "teamshared org bind",
+    "Do not add a second TeamShared server",
+    "Unbound `/mcp` keeps working",
+    "teamshared token mint",
+    ".teamshared/org",
+)
+readme_harnesses = (
+    "Cursor Cloud",
+    "Claude Code",
+    "Codex",
+    "teamshared org status",
+    "teamshared org unbind",
+)
+agents_harnesses = (
+    "### Cursor",
+    "### Cursor Cloud",
+    "### Claude Code",
+    "### Codex",
+)
+
+for label, path in docs.items():
+    text = path.read_text(encoding="utf-8")
+    missing = [needle for needle in required_everywhere if needle not in text]
+    if missing:
+        print(f"FAIL  {label} D4 install docs missing {missing}")
+        sys.exit(1)
+    if "add a second TeamShared server" in text and "Do not add a second TeamShared server" not in text:
+        print(f"FAIL  {label} must not advise adding a second TeamShared server")
+        sys.exit(1)
+    print(f"ok  docs  D4 one-Connect + bind  {label}")
+
+readme = docs["README.md"].read_text(encoding="utf-8")
+for needle in readme_harnesses:
+    if needle not in readme:
+        print(f"FAIL  README.md must cover {needle!r}")
+        sys.exit(1)
+print("ok  docs  README Cursor Cloud + Claude Code + Codex + bind CLI")
+
+agents = docs["AGENTS.md"].read_text(encoding="utf-8")
+for needle in agents_harnesses:
+    if needle not in agents:
+        print(f"FAIL  AGENTS.md must have section {needle!r}")
+        sys.exit(1)
+print("ok  docs  AGENTS.md Cursor / Claude Code / Codex / Cursor Cloud")
+PY
+else
+  echo "skip D4 install-doc check (python3 not found)"
 fi
 
 if command -v python3 >/dev/null 2>&1; then

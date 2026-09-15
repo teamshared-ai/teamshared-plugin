@@ -20,11 +20,13 @@ print OAuth tokens, `TEAMSHARED_TOKEN`, or any secret.
 4. Optionally `memory_session_ensure(repo=..., topic=..., fresh=false)` and
    report the returned `session_id` plus whether `soul` / `agent_memory` /
    `playbook` came back non-empty. Do not dump those bodies unless asked.
-5. Remind the user: this plugin uses MCP OAuth (connect when prompted). Do
-   not mix with `install/codex/` (`TEAMSHARED_TOKEN`). Official Codex hooks
-   must be reviewed and trusted via `/hooks` before capture writes run.
-   SessionStart still injects protocol 1.28.0. Codex has no `StopFailure` or
-   `PostToolUseFailure` (Claude-only).
+5. Remind the user: this plugin uses MCP OAuth (connect when prompted). Bind
+   with `teamshared org bind <slug>`. Do not mix with `install/codex/`
+   (`TEAMSHARED_TOKEN` / `teamshared token mint`) — that is a second
+   TeamShared server. Official Codex hooks must be reviewed and trusted via
+   `/hooks` before capture writes run. SessionStart still injects protocol
+   1.28.0. Codex has no `StopFailure` or `PostToolUseFailure` (Claude-only).
+   Unbound `/mcp` keeps working.
 
 Keep the answer short. Then `context_commit` a one-line summary (`close=false`
 unless the user is done).

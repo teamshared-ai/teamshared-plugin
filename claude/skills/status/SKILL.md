@@ -19,8 +19,10 @@ print `TEAMSHARED_TOKEN` or any secret.
 4. Optionally `memory_session_ensure(repo=..., topic=..., fresh=false)` and
    report the returned `session_id` plus whether `soul` / `agent_memory` /
    `playbook` came back non-empty. Do not dump those bodies unless asked.
-5. Remind the user: Claude Code uses `TEAMSHARED_TOKEN` (`tsk_` minted at
-   `/app/keys`); it does not inherit Cursor Connect. Slash skill
+5. Remind the user: Claude Code authenticates via `/mcp` → Authenticate.
+   Capture hooks use `TEAMSHARED_TOKEN` (`tsk_` from `teamshared token mint`
+   or `/app/keys`) when set. Bind is `teamshared org bind <slug>`; do not
+   add a second TeamShared server. Unbound `/mcp` keeps working. Slash skill
    `/teamshared:status`. Capture hooks are fail-open.
 
 Keep the answer short. Then `context_commit` a one-line summary (`close=false`
