@@ -1,16 +1,17 @@
 # Decision: repo org binding without a duplicate TeamShared server
 
-**Status:** proposed · D1 · 2026-09-15
+**Status:** accepted · D1 · 2026-09-15
 **Issue:** [teamshared-plugin#36](https://github.com/teamshared-ai/teamshared-plugin/issues/36)
 **Plan item:** D1 · Milestone M1 · [plan v6](https://teamshared.com/app/files/f78638c3-80db-4d8e-88e0-ba622373be61)
 **Master:** [personal hub + personal and company orgs](https://teamshared.com/app/work/130df8db-4c2a-47e9-9d4f-c21466295ed5)
 **Attached to master:** [Decision: repo org binding (D1)](https://teamshared.com/app/files/a1d7703d-f571-49e8-a47f-6546d830f0df)
 **Depends:** C1 live on teamshared.com (`/o/{slug}/mcp`, [teamshared#417](https://github.com/teamshared-ai/teamshared/issues/417) / [PR #439](https://github.com/teamshared-ai/teamshared/pull/439))
-**Out of scope here:** D2 hook resolver wiring (shipped in #37), D3 `org bind` / `unbind` CLI
+**Follow-ups shipped:** D2 capture (#37 / #41), D3 `teamshared org bind|status|unbind`, D4 install docs ([#38](https://github.com/teamshared-ai/teamshared-plugin/issues/38), [`../README.md`](../README.md), [`../AGENTS.md`](../AGENTS.md))
 
-This is a spike. It chooses the binding format and records how each harness
-can pick it up without loading a second TeamShared MCP server. It does not
-ship bind/unbind or change capture hooks.
+This spike chose the binding format and recorded how each harness can pick
+it up without loading a second TeamShared MCP server. User-facing install
+copy lives in the README and AGENTS.md — do not add a second TeamShared
+server; unbound `/mcp` keeps working.
 
 ---
 

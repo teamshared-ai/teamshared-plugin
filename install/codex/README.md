@@ -7,15 +7,25 @@ Codex config is **TOML** (`[mcp_servers.teamshared]`), not the JSON
 `mcpServers` object Cursor and Claude use. The CLI, IDE extension, and
 desktop app share the same files.
 
-This package does **not** change the Cursor plugin. Cursor desktop, Cloud,
-and Grok Bot stay on account-level **Connect** (Settings → Tools & MCP →
+This package does **not** change the Cursor plugin. Cursor desktop, Cursor
+Cloud, and Grok Bot stay on account-level **Connect** (Settings → Tools & MCP →
 teamshared → Connect). Do not paste a `tsk_` key into the plugin `mcp.json`.
+
+**One Connect, one org per repo.** Prefer the native Codex marketplace plugin
+([`plugins/teamshared/`](../../plugins/teamshared/README.md)). This TOML path
+is the seat-key fallback for bots that must stay in one org
+(`teamshared token mint` scoped to that org). Use the plugin **or** this
+manual entry, not both. Do not add a second TeamShared server. Bind the
+checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
+Unbound `/mcp` keeps working.
 
 ## 1. Mint a `tsk_` key
 
 1. Sign in at [teamshared.com/app](https://teamshared.com/app) (email + one-time code).
-2. Open [**/app/keys**](https://teamshared.com/app/keys) and mint an org API key.
-3. The value starts with `tsk_`. Keep it out of git.
+2. Mint an org-scoped seat key: `teamshared token mint <agent>`, or open
+   [**/app/keys**](https://teamshared.com/app/keys) and mint an org API key.
+3. The value starts with `tsk_`. Keep it out of git. Bind the repo with
+   `teamshared org bind <slug>` so capture follows the org. Do not add a second TeamShared server.
 
 ```bash
 export TEAMSHARED_TOKEN=tsk_...   # shell that launches Codex; never commit this
@@ -96,7 +106,8 @@ instructions (`AGENTS.md`, etc.) if you want the recall-first loop.
 | Server ignored | Config must be TOML `[mcp_servers.teamshared]`, not JSON `mcpServers`. |
 | Project file does nothing | Trust the directory, or merge into `~/.codex/config.toml` instead. |
 | 401 / no tools | `echo "$TEAMSHARED_TOKEN"` in the same shell; key must start with `tsk_`. |
-| Duplicate `teamshared` | One entry only — CLI **or** file merge, not both targeting the same layer. |
+| Duplicate `teamshared` | One entry only — CLI **or** file merge, not both targeting the same layer. Do not add this TOML next to the native marketplace plugin. |
+| Want a second org | `teamshared org bind <slug>` — do not add a second TeamShared server. Unbound `/mcp` keeps working. |
 
 Official field reference: [Codex MCP](https://developers.openai.com/codex/mcp)
 (`url`, `bearer_token_env_var`, `http_headers`, `env_http_headers`).
