@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Cursor sessionStart additional_context (#33):** after a successful
+  `memory_session_ensure`, the Cursor hook emits Mem0-style
+  `{ "additional_context": "..." }` with the linked soul (when
+  non-empty) and a short playbook header (`name` + truncated
+  `body_md`). Optional `profile` / `bootstrap` from ensure is included
+  when present. Hard-capped (~3.5k chars). Empty soul + no playbook
+  emits no filler. MCP/auth failures stay fail-open (env-only / `{}`).
+  Does not dump recall catalogs, skill libraries, or transcripts.
 - **ChatGPT / Codex logo:** `plugins/teamshared/.codex-plugin/plugin.json`
   now sets `interface.logo`, `interface.logoDark`, and `interface.composerIcon`
   to files inside that package (`assets/logo.png` 512×512,

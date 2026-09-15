@@ -292,6 +292,7 @@ class TurnCaptureTests(unittest.TestCase):
                         )
         self.assertEqual(extra["env"][capture.SESSION_ENV], "ts-1")
         self.assertEqual(extra["env"][capture.CONVERSATION_ENV], "conv-new")
+        self.assertNotIn("additional_context", extra)
         self.assertTrue(calls[0][1]["fresh"])
 
     def test_stop_completed_does_not_close(self) -> None:
@@ -413,12 +414,169 @@ class IngestTests(unittest.TestCase):
                 with patch.object(capture, "resolve_token", return_value=None):
                     with patch.object(capture.urllib.request, "urlopen", side_effect=boom):
                         self.assertFalse(capture.ensure_session(payload, token=None))
+                        extra = capture.handle_session_start(payload)
+                        self.assertNotIn("additional_context", extra)
+                        self.assertEqual(extra["env"][capture.CONVERSATION_ENV], "conv-offline")
+                        self.assertNotIn(capture.SESSION_ENV, extra["env"])
                         self.assertEqual(
                             capture.handle_before_submit_prompt(payload),
                             {"continue": True},
                         )
                         self.assertEqual(capture.handle_after_agent_response(payload), {})
                         self.assertEqual(capture.handle_session_end(payload), {})
+
+
+class SessionStartContextTests(unittest.TestCase):
+    def test_soul_present_includes_additional_context(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            calls.append((name, arguments))
+            return {
+                "session_id": "ts-soul",
+                "soul": "Prefers terse diffs and fail-open hooks.",
+                "soul_linked": True,
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        extra = capture.handle_session_start(
+                            {"session_id": "conv-soul", "cwd": str(Path.cwd())}
+                        )
+        self.assertEqual(extra["env"][capture.SESSION_ENV], "ts-soul")
+        self.assertIn("additional_context", extra)
+        self.assertIn("Prefers terse diffs", extra["additional_context"])
+        self.assertIn("## Soul", extra["additional_context"])
+        self.assertLessEqual(len(extra["additional_context"]), capture.MAX_BOOTSTRAP_CHARS)
+        self.assertTrue(calls[0][1]["fresh"])
+
+    def test_playbook_header_is_truncated_and_named(self) -> None:
+        body = "Step one: recall first.\n" + ("x" * 4000)
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            return {
+                "session_id": "ts-pb",
+                "soul": "",
+                "playbook": {
+                    "name": "Recall first",
+                    "slug": "recall-first",
+                    "body_md": body,
+                },
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        extra = capture.handle_session_start(
+                            {"conversation_id": "conv-pb", "cwd": str(Path.cwd())}
+                        )
+        ctx = extra["additional_context"]
+        self.assertIn("## Playbook: Recall first", ctx)
+        self.assertIn("Step one: recall first.", ctx)
+        self.assertLess(len(ctx), len(body))
+        self.assertLessEqual(len(ctx), capture.MAX_BOOTSTRAP_CHARS)
+        self.assertNotIn("x" * 2000, ctx)
+
+    def test_empty_soul_and_no_playbook_omits_filler(self) -> None:
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            return {
+                "session_id": "ts-empty",
+                "soul": "   ",
+                "soul_linked": True,
+                "playbook": {},
+                "records": [{"content": "do-not-dump-recall"}],
+                "skills": [{"name": "full-library"}],
+                "turns": [{"role": "user", "content": "raw transcript"}],
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        extra = capture.handle_session_start(
+                            {"conversation_id": "conv-empty", "cwd": str(Path.cwd())}
+                        )
+        self.assertEqual(extra["env"][capture.SESSION_ENV], "ts-empty")
+        self.assertNotIn("additional_context", extra)
+        self.assertEqual(
+            capture.bootstrap_additional_context(
+                {
+                    "session_id": "ts-empty",
+                    "soul": "",
+                    "records": [{"content": "do-not-dump-recall"}],
+                    "skills": [{"name": "full-library"}],
+                    "turns": [{"role": "user", "content": "raw transcript"}],
+                }
+            ),
+            "",
+        )
+
+    def test_mcp_failure_fail_open(self) -> None:
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        extra = capture.handle_session_start(
+                            {"session_id": "conv-fail", "cwd": str(Path.cwd())}
+                        )
+        self.assertNotIn("additional_context", extra)
+        self.assertEqual(extra["env"][capture.CONVERSATION_ENV], "conv-fail")
+        self.assertNotIn(capture.SESSION_ENV, extra["env"])
+
+    def test_mcp_exception_fail_open(self) -> None:
+        def boom(*_args, **_kwargs):
+            raise RuntimeError("auth expired")
+
+        payload = {"session_id": "conv-boom", "cwd": str(Path.cwd())}
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "ensure_session_payload", side_effect=boom):
+                    extra = capture.handle_session_start(payload)
+        self.assertEqual(extra["env"][capture.CONVERSATION_ENV], "conv-boom")
+        self.assertNotIn("additional_context", extra)
+        self.assertNotIn(capture.SESSION_ENV, extra["env"])
+
+    def test_profile_included_when_present(self) -> None:
+        ctx = capture.bootstrap_additional_context(
+            {
+                "session_id": "ts-profile",
+                "soul": None,
+                "profile": {"text": "Uses Connect; prefer keyword recall."},
+            }
+        )
+        self.assertIn("## Profile", ctx)
+        self.assertIn("Uses Connect", ctx)
+        self.assertLessEqual(len(ctx), capture.MAX_BOOTSTRAP_CHARS)
+
+    def test_bootstrap_unwraps_structured_content_and_redacts(self) -> None:
+        ctx = capture.bootstrap_additional_context(
+            {
+                "structuredContent": {
+                    "session_id": "ts-wrap",
+                    "soul": "Keep secrets out. Bearer leaked-token-value",
+                }
+            }
+        )
+        self.assertIn("Keep secrets out", ctx)
+        self.assertNotIn("leaked-token-value", ctx)
+        self.assertIn("[redacted]", ctx)
+
+    def test_bootstrap_respects_hard_cap(self) -> None:
+        ctx = capture.bootstrap_additional_context({"soul": "A" * 8000})
+        self.assertTrue(ctx)
+        self.assertLessEqual(len(ctx), capture.MAX_BOOTSTRAP_CHARS)
+        self.assertTrue(ctx.endswith("…"))
 
 
 class HooksManifestTests(unittest.TestCase):
