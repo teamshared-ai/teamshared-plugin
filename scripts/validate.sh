@@ -38,6 +38,8 @@ check "$ROOT/docs/d1-org-binding.md"
 check "$ROOT/scripts/org_binding.py"
 check "$ROOT/scripts/test_org_binding.py"
 check "$ROOT/scripts/d1_harness_probe.sh"
+check "$ROOT/claude/hooks/org_binding.py"
+check "$ROOT/plugins/teamshared/hooks/org_binding.py"
 check "$ROOT/install/pi/mcp.json"
 check "$ROOT/install/hermes/mcp.yaml"
 check "$ROOT/install/hermes/capture.py"
@@ -103,6 +105,27 @@ if command -v python3 >/dev/null 2>&1; then
 import json, re, sys
 
 kebab = re.compile(r"^[a-z0-9][a-z0-9.-]*[a-z0-9]$")
+PLUGIN_MCP_URL = "https://teamshared.com/mcp"
+REPO_MCP_URL_RE = re.compile(
+    r"^https://teamshared\.com(?:/o/[a-z0-9][a-z0-9-]{0,62})?/mcp$"
+)
+
+
+def require_plugin_mcp_url(url, where):
+    if url != PLUGIN_MCP_URL:
+        print(f"FAIL  {where} plugin default must stay {PLUGIN_MCP_URL}, got {url!r}")
+        sys.exit(1)
+
+
+def require_repo_mcp_url(url, where):
+    if not isinstance(url, str) or not REPO_MCP_URL_RE.fullmatch(url):
+        print(
+            f"FAIL  {where} must be {PLUGIN_MCP_URL} or "
+            f"https://teamshared.com/o/{{slug}}/mcp, got {url!r}"
+        )
+        sys.exit(1)
+
+
 (
     plugin_path,
     market_path,
@@ -186,9 +209,7 @@ with open(mcp_path) as f:
     mcp = json.load(f)
 print(f"ok  JSON  {mcp_path}")
 server = (mcp.get("mcpServers") or {}).get("teamshared") or {}
-if server.get("url") != "https://teamshared.com/mcp":
-    print(f"FAIL  mcp.json teamshared.url must be https://teamshared.com/mcp, got {server.get('url')!r}")
-    sys.exit(1)
+require_plugin_mcp_url(server.get("url"), "mcp.json teamshared.url")
 if server.get("headers"):
     print("FAIL  mcp.json must not include headers (Cursor uses OAuth Connect)")
     sys.exit(1)
@@ -258,9 +279,7 @@ open_server = (open_mcp.get("mcpServers") or {}).get("teamshared") or {}
 if open_server.get("type") != "streamable-http":
     print(f"FAIL  .mcp.json teamshared.type must be 'streamable-http', got {open_server.get('type')!r}")
     sys.exit(1)
-if open_server.get("url") != "https://teamshared.com/mcp":
-    print(f"FAIL  .mcp.json teamshared.url, got {open_server.get('url')!r}")
-    sys.exit(1)
+require_plugin_mcp_url(open_server.get("url"), ".mcp.json teamshared.url")
 if open_server.get("headers"):
     print("FAIL  .mcp.json must not include headers")
     sys.exit(1)
@@ -352,12 +371,7 @@ with open(claude_mcp_path) as f:
     claude_mcp = json.load(f)
 print(f"ok  JSON  {claude_mcp_path}")
 claude_server = (claude_mcp.get("mcpServers") or {}).get("teamshared") or {}
-if claude_server.get("url") != "https://teamshared.com/mcp":
-    print(
-        "FAIL  Claude .mcp.json url must be https://teamshared.com/mcp, "
-        f"got {claude_server.get('url')!r}"
-    )
-    sys.exit(1)
+require_plugin_mcp_url(claude_server.get("url"), "Claude .mcp.json url")
 if claude_server.get("type") not in ("http", "streamable-http"):
     print(
         "FAIL  Claude .mcp.json type must be http (or streamable-http), "
@@ -451,11 +465,27 @@ if "1.28.0" not in status:
     print("FAIL  Claude status skill must mention protocol 1.28.0")
     sys.exit(1)
 print("ok  Claude teamshared-memory 1.28.0 + status skill")
+
+require_repo_mcp_url(PLUGIN_MCP_URL, "plugin default shape")
+require_repo_mcp_url("https://teamshared.com/o/sapien/mcp", "bound org shape")
+print("ok  MCP url shapes  plugin /mcp; repo /mcp or /o/{slug}/mcp")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
   python3 "$ROOT/plugins/teamshared/hooks/test_capture.py" -q
   python3 "$ROOT/scripts/test_org_binding.py" -q
+  if ! cmp -s "$ROOT/scripts/org_binding.py" "$ROOT/claude/hooks/org_binding.py"; then
+    echo "FAIL  claude/hooks/org_binding.py must match scripts/org_binding.py"
+    FAIL=1
+  else
+    echo "ok  claude/hooks/org_binding.py  matches D1 resolver"
+  fi
+  if ! cmp -s "$ROOT/scripts/org_binding.py" "$ROOT/plugins/teamshared/hooks/org_binding.py"; then
+    echo "FAIL  plugins/teamshared/hooks/org_binding.py must match scripts/org_binding.py"
+    FAIL=1
+  else
+    echo "ok  plugins/teamshared/hooks/org_binding.py  matches D1 resolver"
+  fi
   python3 - <<'PY' "$ROOT/.agents/plugins/marketplace.json" "$ROOT/plugins/teamshared/.codex-plugin/plugin.json" "$ROOT/plugins/teamshared/.mcp.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/SKILL.md" "$ROOT/plugins/teamshared/skills/status/SKILL.md" "$ROOT/plugins/teamshared/hooks/hooks.json" "$ROOT/plugins/teamshared/skills/teamshared-memory/agents/openai.yaml"
 import json, re, sys
 from pathlib import Path
@@ -851,7 +881,14 @@ for path in capture_paths:
             f"!= rules/teamshared.mdc {rule_version}"
         )
         sys.exit(1)
+    if "resolve_org_binding" not in text or "def resolve_mcp_url" not in text:
+        print(f"FAIL  {path} must resolve MCP URL from .teamshared/org")
+        sys.exit(1)
+    if re.search(r'^MCP_URL\s*=\s*"https://teamshared.com/mcp"', text, re.M):
+        print(f"FAIL  {path} must not hardcode MCP_URL; use the D1 resolver")
+        sys.exit(1)
     print(f"ok  PROTOCOL_VERSION  {path} == {rule_version}")
+    print(f"ok  org binding resolver  {path}")
 PY
 else
   echo "skip protocol drift check (python3 not found)"
@@ -880,6 +917,51 @@ print("ok  docs  README public install/source URLs")
 PY
 else
   echo "skip README public URL check (python3 not found)"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY' "$ROOT"
+import json, re, sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+PLUGIN_MCP_URL = "https://teamshared.com/mcp"
+REPO_MCP_URL_RE = re.compile(
+    r"^https://teamshared\.com(?:/o/[a-z0-9][a-z0-9-]{0,62})?/mcp$"
+)
+
+# Optional repo-level MCP configs (not plugin defaults) may use /o/{slug}/mcp.
+optional = [
+    root / ".cursor" / "mcp.json",
+    root / ".teamshared" / "mcp.json",
+]
+for path in optional:
+    if not path.is_file():
+        continue
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        print(f"FAIL  {path} is not valid JSON")
+        sys.exit(1)
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    if not isinstance(servers, dict):
+        continue
+    for name, server in servers.items():
+        if not isinstance(server, dict):
+            continue
+        url = server.get("url")
+        if url is None:
+            continue
+        if not REPO_MCP_URL_RE.fullmatch(url):
+            print(
+                f"FAIL  {path} {name}.url must be {PLUGIN_MCP_URL} or "
+                f"/o/{{slug}}/mcp, got {url!r}"
+            )
+            sys.exit(1)
+print("ok  repo MCP configs  /mcp or /o/{slug}/mcp allowed")
+PY
+else
+  echo "skip repo MCP url check (python3 not found)"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

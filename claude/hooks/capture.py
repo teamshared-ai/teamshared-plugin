@@ -2,9 +2,12 @@
 
 Stdlib only. Best-effort: never block the agent loop. Writes go through the
 hosted TeamShared MCP (memory_session_ensure + memory_session_append +
-context_commit + memory_session_close) using TEAMSHARED_TOKEN (tsk_ bearer).
-Claude Code does not inherit Cursor Connect. Fail-open if the token is unset
-or MCP is unreachable.
+context_commit + memory_session_close) using the org-scoped TEAMSHARED_TOKEN
+or Claude Code's native /mcp OAuth. Fail-open if the token is unset or MCP
+is unreachable.
+
+Capture POSTs to the org URL from ``.teamshared/org`` (D1 resolver).
+Unbound / invalid → ``/mcp``. Does not register a second TeamShared server.
 """
 
 from __future__ import annotations
@@ -19,7 +22,21 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-MCP_URL = "https://teamshared.com/mcp"
+_HOOKS_DIR = Path(__file__).resolve().parent
+for _org_dir in (
+    _HOOKS_DIR,
+    _HOOKS_DIR.parent / "scripts",
+    _HOOKS_DIR.parent.parent / "scripts",
+    _HOOKS_DIR.parent.parent.parent / "scripts",
+):
+    if (_org_dir / "org_binding.py").is_file():
+        if str(_org_dir) not in sys.path:
+            sys.path.insert(0, str(_org_dir))
+        break
+
+from org_binding import DEFAULT_MCP_URL, resolve_org_binding
+
+MCP_URL = DEFAULT_MCP_URL  # unbound fallback; live calls use resolve_mcp_url()
 PLUGIN_VERSION = "0.13.0"
 PROTOCOL_VERSION = "1.28.0"
 MAX_COMMAND_CHARS = 200
@@ -218,9 +235,7 @@ def workspace_cwd(payload: dict[str, Any] | None = None) -> Path:
     return Path.cwd()
 
 
-def repo_slug(cwd: Path | None = None) -> str:
-    cwd = cwd or Path.cwd()
-    root = cwd
+def _git_toplevel(cwd: Path) -> Path | None:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -231,11 +246,26 @@ def repo_slug(cwd: Path | None = None) -> str:
             timeout=3,
         )
         if out.returncode == 0 and out.stdout.strip():
-            root = Path(out.stdout.strip())
+            return Path(out.stdout.strip())
     except (OSError, subprocess.TimeoutExpired):
         pass
-    slug = str(root).lstrip("/").replace("/", "-")
+    return None
+
+
+def repo_root(cwd: Path | None = None) -> Path:
+    cwd = cwd or Path.cwd()
+    top = _git_toplevel(cwd)
+    return top if top is not None else cwd
+
+
+def repo_slug(cwd: Path | None = None) -> str:
+    slug = str(repo_root(cwd)).lstrip("/").replace("/", "-")
     return slug or "workspace"
+
+
+def resolve_mcp_url(payload: dict[str, Any] | None = None) -> str:
+    """Bound repo → ``/o/{slug}/mcp``; missing or invalid binding → ``/mcp``."""
+    return resolve_org_binding(repo_root(workspace_cwd(payload))).url
 
 
 def github_slug(cwd: Path | None = None) -> str | None:
@@ -501,10 +531,11 @@ def mcp_call(
     name: str,
     arguments: dict[str, Any],
     token: str,
-    url: str = MCP_URL,
+    url: str | None = None,
     timeout: float = MCP_TIMEOUT_SEC,
 ) -> dict[str, Any] | None:
     """JSON-RPC tools/call against the hosted TeamShared MCP."""
+    url = url or MCP_URL
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -618,7 +649,9 @@ def ensure_session(
         ensure_args["github"] = github
     if user:
         ensure_args["user"] = clamp(strip_secrets(user), MAX_TURN_CHARS)
-    ensured = mcp_call("memory_session_ensure", ensure_args, token)
+    ensured = mcp_call(
+        "memory_session_ensure", ensure_args, token, url=resolve_mcp_url(payload)
+    )
     session_id = _session_id_from_result(ensured) or (cached if not fresh else None)
     if session_id:
         store_mapped_session(cid, session_id)
@@ -652,7 +685,9 @@ def append_turn(
     }
     if github:
         args["github"] = github
-    result = mcp_call("memory_session_append", args, token)
+    result = mcp_call(
+        "memory_session_append", args, token, url=resolve_mcp_url(payload)
+    )
     new_id = _session_id_from_result(result)
     if new_id:
         store_mapped_session(cid, new_id)
@@ -683,6 +718,7 @@ def close_session(
         "memory_session_close",
         {"session_id": session_id, "distill": True},
         token,
+        url=resolve_mcp_url(payload),
         timeout=SESSION_END_MCP_TIMEOUT_SEC,
     )
     drop_mapped_session(cid)
@@ -721,7 +757,9 @@ def ingest(
                 "tags": ["origin:agent", "claude", "hook"],
             }
         ]
-    committed = mcp_call("context_commit", commit_args, token)
+    committed = mcp_call(
+        "context_commit", commit_args, token, url=resolve_mcp_url(payload)
+    )
     return committed is not None
 
 
