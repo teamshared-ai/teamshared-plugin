@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.28.0 for Claude Code. Use on every turn when TeamShared MCP tools are available, and when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.29.0 for Claude Code. Use on every turn when TeamShared MCP tools are available, and when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Claude Code)
 
-<!-- teamshared-rule-version: 1.28.0 -->
+<!-- teamshared-rule-version: 1.29.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -25,7 +25,7 @@ capture anything, and the MCP connection and every-turn workflow are
 unaffected. Never store or print the token. Point humans at the console
 (`/app`) for sign-in, wiki, people, and keys.
 
-This skill is protocol **1.28.0** — the same fetch/store loop as
+This skill is protocol **1.29.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Claude Code
 (OAuth MCP connection, `TEAMSHARED_TOKEN` hooks, Claude write path). SessionStart
 also injects the every-turn loop.
@@ -37,7 +37,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.28.0`) as
+versions), call `version` with this skill's protocol version (`1.29.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.claude/rules/teamshared.md` (or `.claude/rules/teamshared.md` in a repo)
@@ -64,7 +64,9 @@ Run in order:
 
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
-re-normalize teamshared MCP responses.
+re-normalize teamshared MCP responses. If `memory_session_ensure` returns
+`warnings`, relay them once this session (suggest `teamshared org bind <slug>`).
+Do not require a bind.
 
 ## Fetch
 
