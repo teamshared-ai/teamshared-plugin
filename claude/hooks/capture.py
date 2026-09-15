@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_LOAD_FROM_DISK
+FILE_CONTENT_FROM_/tmp/mcp_update_capture.json
