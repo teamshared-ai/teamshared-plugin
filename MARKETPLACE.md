@@ -10,11 +10,11 @@ capture Agent Chat (`sessionStart`, `beforeSubmitPrompt`,
 
 Claude Code installs from the same GitHub URL via
 `.claude-plugin/marketplace.json` (separate first-class package under
-`claude/`: MCP + protocol 1.28.0 + official Claude Code capture hooks).
+`claude/`: MCP + protocol 1.29.0 + official Claude Code capture hooks).
 Official Anthropic marketplace submit is out of scope.
 
 Codex installs from `.agents/plugins/marketplace.json` (package under
-`plugins/teamshared/`: OAuth MCP + protocol 1.28.0 + official Codex capture
+`plugins/teamshared/`: OAuth MCP + protocol 1.29.0 + official Codex capture
 hooks). Keep that OAuth path separate from `install/codex/` (`tsk_`).
 
 ## Install (team / git marketplace)
