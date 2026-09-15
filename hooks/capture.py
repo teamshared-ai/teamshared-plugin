@@ -41,7 +41,7 @@ from org_binding import DEFAULT_MCP_URL, resolve_org_binding
 
 MCP_URL = DEFAULT_MCP_URL  # unbound fallback; live calls use resolve_mcp_url()
 PLUGIN_VERSION = "0.13.0"
-PROTOCOL_VERSION = "1.28.0"
+PROTOCOL_VERSION = "1.29.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900
@@ -418,7 +418,6 @@ def conversation_id(payload: dict[str, Any] | None = None) -> str | None:
         val = payload.get(key)
         if isinstance(val, str) and val.strip():
             return val.strip()
-    # sessionStart / sessionEnd use session_id as an alias of conversation_id.
     val = payload.get("session_id") or payload.get("sessionId")
     if isinstance(val, str) and val.strip():
         return val.strip()
@@ -835,7 +834,6 @@ def ensure_session_payload(
     repo, github, cid = _scope_args(payload)
     cached = mapped_session_id(cid)
     if cached and fresh:
-        # sessionStart can fire more than once for the same composer id.
         fresh = False
     ensure_args: dict[str, Any] = {
         "repo": repo,

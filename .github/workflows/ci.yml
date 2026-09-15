@@ -16,4 +16,4 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Validate plugin bundles
-        run: ./scripts/validate.sh
+        run: bash scripts/validate.sh

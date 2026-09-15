@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **D5 unbound multi-org warning (protocol 1.29.0):** `rules/teamshared.mdc`
+  matches the server copy. Agents relay `memory_session_ensure` `warnings`
+  once per session and suggest `teamshared org bind <slug>`. Binding is
+  not required.
 - **D4 docs: one Connect, one org per repo (#38):** install guides teach
   connect once and `teamshared org bind <slug>` (`.teamshared/org`). Do not
   add a second TeamShared server. Unbound `/mcp` keeps working. Bots that
