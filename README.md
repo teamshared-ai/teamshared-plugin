@@ -17,8 +17,10 @@ OAuth discovery flow and treats Codex as a first-class client: protocol 1.27.0,
 SessionStart injection, and official Codex capture hooks. A manual Codex TOML
 setup remains available under `install/codex/` (`TEAMSHARED_TOKEN`; do not mix).
 
-The MCP server itself lives in [`teamshared-ai/teamshared`](https://github.com/teamshared-ai/teamshared)
-and is hosted at [teamshared.com](https://teamshared.com).
+Hosted install is [teamshared.com/#connect](https://teamshared.com/#connect).
+The public plugin / marketplace source is this repo
+([`teamshared-ai/teamshared-plugin`](https://github.com/teamshared-ai/teamshared-plugin)).
+The remote MCP endpoint is [`https://teamshared.com/mcp`](https://teamshared.com/mcp).
 
 | Component | Purpose |
 |---|---|
