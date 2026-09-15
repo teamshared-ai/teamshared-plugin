@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.27.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.28.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Codex)
 
-<!-- teamshared-rule-version: 1.27.0 -->
+<!-- teamshared-rule-version: 1.28.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -21,7 +21,7 @@ minted at https://teamshared.com/app/keys). Do **not** install that fallback
 alongside this plugin. Point humans at the console (`/app`) for sign-in,
 wiki, people, and keys.
 
-This skill is protocol **1.27.0** — the same fetch/store loop as
+This skill is protocol **1.28.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex
 (OAuth MCP, `AGENTS.md` version notes, official Codex hooks). SessionStart
 also injects the every-turn loop so recall/commit runs without the user
@@ -34,7 +34,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.27.0`) as
+versions), call `version` with this skill's protocol version (`1.28.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, tell the user a newer protocol exists and that they
 should upgrade this marketplace plugin. Codex has no Cursor `.mdc` or Claude
@@ -106,7 +106,7 @@ Hooks store the transcript; you still recall first and may `context_commit`
 curated facts. Do not re-append the same user/assistant text in the same turn.
 Plugin hooks stay skipped until the user reviews and trusts them (`/hooks`).
 
-**Durable `facts[]`** (still true next week; one dense paragraph; `subject` +
+**Durable `facts[]`** (still true next week; one dense paragraph; `subject` + 
 tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /
 `github=`.
 
