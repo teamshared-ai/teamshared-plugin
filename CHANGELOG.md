@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Namespace containers (protocol 1.30.0):** `rules/teamshared.mdc` matches
+  the server copy. `namespace=` is an org-allowlisted hard exclude on recall
+  (not a boost); write defaults from `github=` / `repo=`. Claude and Codex
+  skills stay on the same loop. Capture `PROTOCOL_VERSION` pins stay in
+  lockstep with the rule.
 - **D5 unbound multi-org warning (protocol 1.29.0):** `rules/teamshared.mdc`
   matches the server copy. Agents relay `memory_session_ensure` `warnings`
   once per session and suggest `teamshared org bind <slug>`. Binding is

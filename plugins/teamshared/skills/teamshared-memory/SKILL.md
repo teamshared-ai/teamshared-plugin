@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.29.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.30.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Codex)
 
-<!-- teamshared-rule-version: 1.29.0 -->
+<!-- teamshared-rule-version: 1.30.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -23,7 +23,7 @@ server). Bind the checkout with `teamshared org bind <slug>`. Unbound `/mcp`
 keeps working. Point humans at the console (`/app`) for sign-in, wiki,
 people, and keys.
 
-This skill is protocol **1.29.0** — the same fetch/store loop as
+This skill is protocol **1.30.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex
 (OAuth MCP, `AGENTS.md` version notes, official Codex hooks). SessionStart
 also injects the every-turn loop so recall/commit runs without the user
@@ -36,7 +36,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.29.0`) as
+versions), call `version` with this skill's protocol version (`1.30.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, tell the user a newer protocol exists and that they
 should upgrade this marketplace plugin. Codex has no Cursor `.mdc` or Claude
@@ -81,6 +81,7 @@ memory_recall(
   query=<1-3 keyword tokens>,
   repo=<workspace-slug>,
   github=<owner/repo>,
+  namespace=github:<owner/repo>,
   explain=true
 )
 ```
@@ -112,7 +113,7 @@ Plugin hooks stay skipped until the user reviews and trusts them (`/hooks`).
 
 **Durable `facts[]`** (still true next week; one dense paragraph; `subject` + 
 tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /
-`github=`.
+`github=` (boost) and optional `namespace=` (defaults from those args on write).
 
 | Signal | `kind` |
 |---|---|
@@ -170,7 +171,10 @@ Resolve `repo=` every chat, not only git tasks:
    retry with `github=` and/or tags.
 
 Reads are the shared brain (all agents) unless you pass `agent=` to narrow.
-Writes attribute to the authenticated identity.
+Writes attribute to the authenticated identity. `namespace=` (`github:owner/repo`,
+`repo:slug`, or `project:name`) is an org-allowlisted container: omit on recall
+for shared-org; set it to **exclude** other namespaces (not a boost). Invalid
+or unknown slugs fail. First write creates the slug.
 
 `memory_recall` may return hits **and** `degraded: true` when
 `errors_by_pillar` is non-empty (a pillar timed out or was unavailable).

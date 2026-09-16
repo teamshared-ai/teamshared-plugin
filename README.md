@@ -9,11 +9,11 @@ extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
 (remote MCP via Claude Code's native `/mcp` OAuth, `TEAMSHARED_TOKEN` for the
-optional capture hooks, protocol 1.29.0, SessionStart injection, and official
+optional capture hooks, protocol 1.30.0, SessionStart injection, and official
 Claude Code capture hooks).
 
 The native **Codex** package under `plugins/teamshared/` uses the server's MCP
-OAuth discovery flow and treats Codex as a first-class client: protocol 1.29.0,
+OAuth discovery flow and treats Codex as a first-class client: protocol 1.30.0,
 SessionStart injection, and official Codex capture hooks. A manual Codex TOML
 setup remains available under `install/codex/` (`TEAMSHARED_TOKEN`; do not mix).
 
@@ -32,10 +32,10 @@ on the org chosen at Connect time. Agent-facing copy: [`AGENTS.md`](AGENTS.md).
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
 | `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell) and `preCompact` |
-| `claude/` | Claude Code plugin (remote MCP via native `/mcp` OAuth + protocol 1.29.0 + capture hooks needing `TEAMSHARED_TOKEN`) |
+| `claude/` | Claude Code plugin (remote MCP via native `/mcp` OAuth + protocol 1.30.0 + capture hooks needing `TEAMSHARED_TOKEN`) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
-| `plugins/teamshared/` | Native Codex plugin (OAuth MCP + protocol 1.29.0 + official capture hooks) |
+| `plugins/teamshared/` | Native Codex plugin (OAuth MCP + protocol 1.30.0 + official capture hooks) |
 | `clients/` | Copy-paste protocol + MCP examples for non-Cursor harnesses (not loaded by Cursor) |
 
 ## Install
@@ -78,7 +78,7 @@ export TEAMSHARED_TOKEN=tsk_...   # mint under https://teamshared.com/app/keys
 Without it the hooks just no-op; the MCP connection and every-turn workflow
 work fine either way. Bind the checkout with `teamshared org bind <slug>` so
 capture follows the org; do not add a project `.mcp.json` TeamShared server.
-Unbound `/mcp` keeps working. `SessionStart` injects protocol 1.29.0;
+Unbound `/mcp` keeps working. `SessionStart` injects protocol 1.30.0;
 `/teamshared:status` checks health + version. Details:
 [`claude/README.md`](claude/README.md).
 
@@ -96,7 +96,7 @@ Restart the Codex app, start a new task, and connect TeamShared when prompted.
 Then review and trust plugin hooks with `/hooks` so capture writes run.
 Bind the checkout with `teamshared org bind <slug>`; do not add a second
 `[mcp_servers.teamshared]` next to the plugin. Unbound `/mcp` keeps working.
-`SessionStart` injects protocol 1.29.0; `$status` checks health + version.
+`SessionStart` injects protocol 1.30.0; `$status` checks health + version.
 The package lives under [`plugins/teamshared/`](plugins/teamshared/) and is
 cataloged by [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json).
 Details: [`plugins/teamshared/README.md`](plugins/teamshared/README.md).
@@ -226,9 +226,9 @@ Bots that must stay in one org: `teamshared token mint <agent>` (org-scoped
 seat key) or `/app/keys`. Still one server.
 
 The Cursor plugin still has no skills, slash commands, or extra agents.
-The Claude Code package ships protocol **1.29.0** (`teamshared-memory`),
+The Claude Code package ships protocol **1.30.0** (`teamshared-memory`),
 `/teamshared:status`, and official Claude Code capture hooks. The Codex
-package ships the same 1.29.0 loop plus official Codex hooks (`SessionStart`,
+package ships the same 1.30.0 loop plus official Codex hooks (`SessionStart`,
 `UserPromptSubmit`, `Stop`, `Interrupt`, `SessionEnd`, `PostToolUse` on failed
 `Bash`, `PreCompact`). `SessionEnd` closes through one bounded commit;
 `Interrupt` covers Cursor abort parity. Codex has no `StopFailure` or
