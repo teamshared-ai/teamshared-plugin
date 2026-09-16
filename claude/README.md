@@ -19,9 +19,9 @@ unchanged (email/OTP Connect + Cursor hook event names).
 call MCP `org_list` / `org_bind` when those tools exist.
 `teamshared org bind <slug>` is an optional fallback that writes
 `.teamshared/org`. Capture follows that file. Do not add a second TeamShared
-server (no project `.mcp.json` TeamShared entry). Unbound `/mcp` keeps
-working. Bots that must stay in one org use `teamshared token mint`
-(org-scoped seat key) as `TEAMSHARED_TOKEN` for the hooks.
+server (no project `.mcp.json` TeamShared entry). Unbound `/mcp` keeps working.
+Bots that must stay in one org use `teamshared token mint` (org-scoped seat
+key) as `TEAMSHARED_TOKEN` for the hooks.
 
 ## Install
 
