@@ -99,7 +99,7 @@ If ensure returns `warnings` or the user asks to switch orgs, call
 `org_list` / `org_context_get` then `org_bind(slug=..., scope=conversation|workspace)`.
 Conversation needs Mcp-Session-Id (else reason=no_session). Workspace is
 account + repo slug. `org_unbind` clears the overlay. Precedence: path
-`/o/{slug}/mcp` > conversation > workspace > OAuth/tsk_ default.
+`/o/{{slug}}/mcp` > conversation > workspace > OAuth/tsk_ default.
 `teamshared org bind <slug>` is an optional fallback. Do not tell the
 user to install the TeamShared CLI.
 
