@@ -119,7 +119,7 @@ instructions (`AGENTS.md`, etc.) if you want the recall-first loop.
 | Project file does nothing | Trust the directory, or merge into `~/.codex/config.toml` instead. |
 | 401 / no tools | `echo "$TEAMSHARED_TOKEN"` in the same shell; key must start with `tsk_`. |
 | Duplicate `teamshared` | One entry only — CLI **or** file merge, not both targeting the same layer. Do not add this TOML next to the native marketplace plugin. |
-| OAuth opens Chrome / system browser | Expected. The **first** open is the Codex host; TeamShared only serves `/oauth/authorize` + redirect. ChatGPT `@Browser` is not MCP Authenticate. Use this `TEAMSHARED_TOKEN` path to skip the browser, or finish OTP in Chrome. A companion teamshared PR may soften the post-OTP `oauth_loopback.html` double-handoff — it does not change the first open. [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46). |
+| OAuth opens Chrome / system browser | Expected. The **first** open is the Codex host; TeamShared only serves `/oauth/authorize` + redirect. ChatGPT `@Browser` is not MCP Authenticate. After OTP, `oauth_loopback.html` uses a **single** handoff (not iframe + `location.replace`). Use this `TEAMSHARED_TOKEN` path to skip the browser, or finish OTP in Chrome. [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46). Server finish-page: teamshared PR 540. |
 | Want a second org | `teamshared org bind <slug>` — do not add a second TeamShared server. Unbound `/mcp` keeps working. |
 
 Official field reference: [Codex MCP](https://developers.openai.com/codex/mcp)
