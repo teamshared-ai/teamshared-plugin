@@ -20,8 +20,7 @@ call `org_list` / `org_context_get` then
 `org_bind(slug=..., scope=conversation|workspace)`. `org_unbind` clears
 the overlay. `teamshared org bind <slug>` is an optional fallback that
 writes `.teamshared/org`. Capture follows that file. Do not add a second
-TeamShared server (no project `.mcp.json` TeamShared entry). Unbound `/mcp`
-keeps working.
+TeamShared server (no project `.mcp.json` TeamShared entry). Unbound `/mcp` keeps working.
 Bots that must stay in one org use `teamshared token mint` (org-scoped seat
 key) as `TEAMSHARED_TOKEN` for the hooks.
 
