@@ -2,14 +2,17 @@
 
 ## Unreleased
 
-- **MCP-native org bind (blocked on server #541):** Cursor
-  `rules/teamshared.mdc`, Claude `teamshared-memory`, and Codex
-  `teamshared-memory` now tell agents to call MCP `org_list` / `org_bind`
-  when those tools exist (chat bind without a local CLI).
-  `teamshared org bind <slug>` stays an optional fallback. No protocol
-  bump yet — server has no `org_*` tools and no matching `rule_markdown`.
-  Align names and version when the server PR lands. Do not invent a
-  contract. Validation pins the skill/rule text.
+- **MCP org bind (protocol 1.31.0):** lockstep with server
+  [teamshared#542](https://github.com/teamshared-ai/teamshared/pull/542)
+  (Fixes #541). `rules/teamshared.mdc` matches the server client mdc.
+  Claude/Codex skills document `org_list` / `org_context_get` /
+  `org_bind(slug, scope=conversation|workspace)` / `org_unbind`,
+  precedence (path > conversation > workspace > OAuth/`tsk_`), and
+  safety (membership fail-closed; `tsk_` cannot switch; path mounts
+  cannot be overridden; not a global account switch).
+  `memory_session_ensure` warnings recommend `org_bind(slug=...)`.
+  CLI `teamshared org bind` is an optional fallback only — do not tell
+  the user to install the CLI. Merge after server #542.
 - **Codex MCP OAuth browser (#46 / #47):** the first open is the Codex /
   ChatGPT host (system default browser). TeamShared only serves
   `/oauth/authorize` and the redirect. ChatGPT `@Browser` is Computer Use,

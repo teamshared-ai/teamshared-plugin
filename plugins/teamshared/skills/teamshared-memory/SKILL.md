@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.30.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.31.0 for Codex. Use on every turn when TeamShared MCP tools are available — memory_session_ensure, memory_recall, then context_commit — even when the user does not name TeamShared, memory, or this skill. Also use when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Codex)
 
-<!-- teamshared-rule-version: 1.30.0 -->
+<!-- teamshared-rule-version: 1.31.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -19,12 +19,13 @@ credentials, or login codes in TeamShared memory.
 The separate `install/codex/` TOML path uses `TEAMSHARED_TOKEN` (`tsk_`
 from `teamshared token mint` or https://teamshared.com/app/keys). Do **not**
 install that fallback alongside this plugin (that adds a second TeamShared
-server). When the user asks to bind or switch orgs, call MCP `org_list` /
-`org_bind` if those tools exist. `teamshared org bind <slug>` is an
+server). When the user asks to bind or switch orgs, call `org_list` /
+`org_context_get`, then `org_bind(slug=..., scope=conversation|workspace)`.
+`org_unbind` clears the overlay. `teamshared org bind <slug>` is an
 optional fallback. Unbound `/mcp` keeps working. Point humans at the
 console (`/app`) for sign-in, wiki, people, and keys.
 
-This skill is protocol **1.30.0** — the same fetch/store loop as
+This skill is protocol **1.31.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex
 (OAuth MCP, `AGENTS.md` version notes, official Codex hooks). SessionStart
 also injects the every-turn loop so recall/commit runs without the user
@@ -37,7 +38,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.30.0`) as
+versions), call `version` with this skill's protocol version (`1.31.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, tell the user a newer protocol exists and that they
 should upgrade this marketplace plugin. Codex has no Cursor `.mdc` or Claude
@@ -67,13 +68,19 @@ Run in order:
 
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
-re-normalize teamshared MCP responses. If `memory_session_ensure` returns
-`warnings`, or the user asks to bind or switch orgs, call MCP `org_list` /
-`org_bind` when those tools exist in the live catalog. Do not tell the
-user to install the TeamShared CLI. `teamshared org bind <slug>` is an
-optional fallback when the MCP tools are missing. Relay `warnings` once
-this session. Do not require a bind. Do not invent org-tool names or
-arguments — follow the live descriptors.
+re-normalize teamshared MCP responses.
+
+`ensure` / `recall` / `remember` / `context_commit` / `work_*` writes return
+`org: {slug, name, kind}`, `bound`, and `bound_scope`. Switch orgs with
+`org_list` / `org_context_get`, then `org_bind(slug=..., scope=conversation|workspace)`.
+Conversation bind is this `Mcp-Session-Id` only (else `reason=no_session`).
+Workspace bind is account + repo slug. `org_unbind` clears the overlay.
+Precedence: path `/o/{slug}/mcp` > conversation > workspace > OAuth/`tsk_`
+token default. Membership is fail-closed. `tsk_` seat keys cannot switch.
+Path mounts cannot be overridden. This is not a global account switch.
+If `memory_session_ensure` returns `warnings`, relay once and call
+`org_bind(slug=...)`. Do not tell the user to install the TeamShared CLI.
+`teamshared org bind <slug>` is an optional fallback. Do not require a bind.
 
 ## Fetch
 

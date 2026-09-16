@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Pins MCP-native org-bind guidance in harness skills and rules.
+"""Pins MCP-native org-bind guidance to the shipped server contract.
 
-Candidate tool names come from teamshared-ai/teamshared#541
-(``org_list`` / ``org_bind``). There is no shipped server contract yet —
-do not invent extra names or arguments. CLI bind stays an optional fallback.
+Authoritative contract: teamshared-ai/teamshared#542 (Fixes #541), protocol
+1.31.0. ``rules/teamshared.mdc`` must stay a verbatim copy of
+``src/teamshared/clients/teamshared.mdc``. Claude/Codex skills document the
+four tools, scope, and precedence. CLI bind is an optional fallback only.
 """
 
 from __future__ import annotations
@@ -13,8 +14,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-PROTOCOL_FILES = (
-    ROOT / "rules" / "teamshared.mdc",
+MDC = ROOT / "rules" / "teamshared.mdc"
+
+SKILL_FILES = (
     ROOT / "claude" / "skills" / "teamshared-memory" / "SKILL.md",
     ROOT / "plugins" / "teamshared" / "skills" / "teamshared-memory" / "SKILL.md",
 )
@@ -24,24 +26,51 @@ STATUS_FILES = (
     ROOT / "plugins" / "teamshared" / "skills" / "status" / "SKILL.md",
 )
 
-REQUIRED = (
+# Server client mdc (lean lockstep copy).
+MDC_REQUIRED = (
+    "1.31.0",
     "org_list",
+    "org_bind(slug=...)",
+    "bound_scope",
+    "teamshared org bind",
+    "is optional",
+)
+
+# Full shipped contract for harness skills.
+SKILL_REQUIRED = (
+    "1.31.0",
+    "org_list",
+    "org_context_get",
     "org_bind",
+    "org_unbind",
+    "scope=conversation",
+    "workspace",
+    "Mcp-Session-Id",
+    "no_session",
     "teamshared org bind <slug>",
     "optional fallback",
 )
 
-# CLI-only warning copy that #541 replaces for chat-first hosts.
-LEGACY_CLI_ONLY = "(suggest `teamshared org bind <slug>`)"
-
-# Issue #541 listed these as candidates; do not treat them as the contract.
-INVENTED_CONTRACT = (
-    "org_bind(slug, scope=",
-    "org_unbind",
+STATUS_REQUIRED = (
+    "1.31.0",
+    "org_list",
     "org_context_get",
+    "org_bind",
+    "org_unbind",
+    "optional fallback",
+    "teamshared org bind <slug>",
 )
 
+LEGACY_CLI_ONLY = "(suggest `teamshared org bind <slug>`)"
 NO_CLI_INSTALL = "Do not tell the user to install the TeamShared CLI"
+PRECEDENCE = "path `/o/{slug}/mcp` > conversation"
+BLOCKED_OR_CANDIDATE = (
+    "when those tools exist",
+    "blocked on server",
+    "candidate names",
+    "Do not invent org-tool",
+    "There is no shipped server contract",
+)
 
 
 def collapsed(text: str) -> str:
@@ -49,43 +78,49 @@ def collapsed(text: str) -> str:
 
 
 class OrgBindGuidanceTests(unittest.TestCase):
-    def test_protocol_files_prefer_mcp_org_tools(self) -> None:
-        for path in PROTOCOL_FILES:
+    def test_mdc_matches_server_org_bind_copy(self) -> None:
+        text = MDC.read_text(encoding="utf-8")
+        flat = collapsed(text)
+        for needle in MDC_REQUIRED:
+            self.assertIn(needle, flat, f"{MDC} missing {needle!r}")
+        self.assertNotIn(LEGACY_CLI_ONLY, text)
+        for forbidden in BLOCKED_OR_CANDIDATE:
+            self.assertNotIn(forbidden, text, f"{MDC} still has {forbidden!r}")
+
+    def test_protocol_skills_document_shipped_contract(self) -> None:
+        for path in SKILL_FILES:
             text = path.read_text(encoding="utf-8")
             flat = collapsed(text)
-            for needle in REQUIRED:
+            for needle in SKILL_REQUIRED:
                 self.assertIn(needle, flat, f"{path} missing {needle!r}")
-            self.assertIn(
-                NO_CLI_INSTALL,
-                flat,
-                f"{path} must not send chat users to install the CLI",
-            )
-            self.assertNotIn(
-                LEGACY_CLI_ONLY,
-                text,
-                f"{path} still has CLI-only warning copy",
-            )
-            for forbidden in INVENTED_CONTRACT:
-                self.assertNotIn(
-                    forbidden,
-                    text,
-                    f"{path} must not invent {forbidden!r} before the server PR",
-                )
+            self.assertIn(NO_CLI_INSTALL, flat, f"{path} must not send chat users to install the CLI")
+            self.assertIn(PRECEDENCE, flat, f"{path} missing precedence")
+            self.assertNotIn(LEGACY_CLI_ONLY, text)
+            for forbidden in BLOCKED_OR_CANDIDATE:
+                self.assertNotIn(forbidden, text, f"{path} still has {forbidden!r}")
 
-    def test_status_skills_prefer_mcp_org_tools(self) -> None:
+    def test_status_skills_document_shipped_contract(self) -> None:
         for path in STATUS_FILES:
-            flat = collapsed(path.read_text(encoding="utf-8"))
-            for needle in ("org_list", "org_bind", "optional fallback"):
+            text = path.read_text(encoding="utf-8")
+            flat = collapsed(text)
+            for needle in STATUS_REQUIRED:
                 self.assertIn(needle, flat, f"{path} missing {needle!r}")
-            self.assertIn("teamshared org bind <slug>", flat)
+            self.assertNotIn("when those tools exist", text)
 
     def test_agents_md_mcp_first_cli_fallback(self) -> None:
         flat = collapsed((ROOT / "AGENTS.md").read_text(encoding="utf-8"))
-        self.assertIn("org_list", flat)
-        self.assertIn("org_bind", flat)
-        self.assertIn("optional fallback", flat)
-        self.assertIn("teamshared org bind <slug>", flat)
-        self.assertIn(NO_CLI_INSTALL, flat)
+        for needle in (
+            "org_list",
+            "org_context_get",
+            "org_bind",
+            "org_unbind",
+            "scope=conversation",
+            "optional fallback",
+            "teamshared org bind <slug>",
+            NO_CLI_INSTALL,
+        ):
+            self.assertIn(needle, flat, f"AGENTS.md missing {needle!r}")
+        self.assertNotIn("when those tools exist", flat)
 
 
 if __name__ == "__main__":

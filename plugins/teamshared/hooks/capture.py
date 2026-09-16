@@ -12,7 +12,7 @@ Auth for hook subprocesses (they cannot see Codex's in-process OAuth):
    ``install/codex/`` TOML path with this plugin.
 
 Keyring-only OAuth (no file fallback) is a documented gap: SessionStart still
-injects protocol 1.30.0; capture writes fail-open. Codex has no StopFailure
+injects protocol 1.31.0; capture writes fail-open. Codex has no StopFailure
 or PostToolUseFailure events.
 
 Capture POSTs to the org URL from ``.teamshared/org`` (D1 resolver).
@@ -48,7 +48,7 @@ from org_binding import DEFAULT_MCP_URL, resolve_org_binding
 
 MCP_URL = DEFAULT_MCP_URL  # unbound fallback; live calls use resolve_mcp_url()
 PLUGIN_VERSION = "0.13.0"
-PROTOCOL_VERSION = "1.30.0"
+PROTOCOL_VERSION = "1.31.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900
@@ -95,9 +95,13 @@ secrets, tokens, or credentials. Follow the `teamshared-memory` skill
 (protocol {PROTOCOL_VERSION}) for fetch/store, CRM, and version updates.
 
 Unsure which tool? Call `memory_tools_catalog(need=\"<intent>\")`.
-If ensure returns `warnings` or the user asks to switch orgs, call MCP
-`org_list` / `org_bind` when those tools exist. `teamshared org bind <slug>`
-is an optional fallback. Do not tell the user to install the TeamShared CLI.
+If ensure returns `warnings` or the user asks to switch orgs, call
+`org_list` / `org_context_get` then `org_bind(slug=..., scope=conversation|workspace)`.
+Conversation needs Mcp-Session-Id (else reason=no_session). Workspace is
+account + repo slug. `org_unbind` clears the overlay. Precedence: path
+`/o/{slug}/mcp` > conversation > workspace > OAuth/tsk_ default.
+`teamshared org bind <slug>` is an optional fallback. Do not tell the
+user to install the TeamShared CLI.
 
 ## Every turn
 
