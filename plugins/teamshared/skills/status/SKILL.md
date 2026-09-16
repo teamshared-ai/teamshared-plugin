@@ -10,7 +10,7 @@ print OAuth tokens, `TEAMSHARED_TOKEN`, or any secret.
 
 1. Call `health`. If it fails, say MCP is unreachable and stop. Do not probe
    `TEAMSHARED_*` in the shell.
-2. Call `version` with `installed_rule_version` `1.29.0`. Report
+2. Call `version` with `installed_rule_version` `1.30.0`. Report
    `update_available` exactly. Never invent a version. If an update is
    available, tell the user to upgrade this marketplace plugin; you may add
    a short note to `~/.codex/AGENTS.md` (or the repo `AGENTS.md`). Do not
@@ -25,7 +25,7 @@ print OAuth tokens, `TEAMSHARED_TOKEN`, or any secret.
    (`TEAMSHARED_TOKEN` / `teamshared token mint`) — that is a second
    TeamShared server. Official Codex hooks must be reviewed and trusted via
    `/hooks` before capture writes run. SessionStart still injects protocol
-   1.29.0. Codex has no `StopFailure` or `PostToolUseFailure` (Claude-only).
+   1.30.0. Codex has no `StopFailure` or `PostToolUseFailure` (Claude-only).
    Unbound `/mcp` keeps working.
 
 Keep the answer short. Then `context_commit` a one-line summary (`close=false`

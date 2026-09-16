@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.29.0 for Claude Code. Use on every turn when TeamShared MCP tools are available, and when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.30.0 for Claude Code. Use on every turn when TeamShared MCP tools are available, and when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Claude Code)
 
-<!-- teamshared-rule-version: 1.29.0 -->
+<!-- teamshared-rule-version: 1.30.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -28,7 +28,7 @@ unaffected. Never store or print the token. Bind the checkout with
 Unbound `/mcp` keeps working. Point humans at the console (`/app`) for
 sign-in, wiki, people, and keys.
 
-This skill is protocol **1.29.0** — the same fetch/store loop as
+This skill is protocol **1.30.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Claude Code
 (OAuth MCP connection, `TEAMSHARED_TOKEN` hooks, Claude write path). SessionStart
 also injects the every-turn loop.
@@ -40,7 +40,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.29.0`) as
+versions), call `version` with this skill's protocol version (`1.30.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.claude/rules/teamshared.md` (or `.claude/rules/teamshared.md` in a repo)
@@ -82,6 +82,7 @@ memory_recall(
   query=<1-3 keyword tokens>,
   repo=<workspace-slug>,
   github=<owner/repo>,
+  namespace=github:<owner/repo>,
   explain=true
 )
 ```
@@ -111,7 +112,7 @@ in the same turn.
 
 **Durable `facts[]`** (still true next week; one dense paragraph; `subject` + 
 tags). `[[Entity]]` wikilinks autolink. Code-scoped facts take `repo=` /
-`github=`.
+`github=` (boost) and optional `namespace=` (defaults from those args on write).
 
 | Signal | `kind` |
 |---|---|
@@ -169,7 +170,10 @@ Resolve `repo=` every chat, not only git tasks:
    retry with `github=` and/or tags.
 
 Reads are the shared brain (all agents) unless you pass `agent=` to narrow.
-Writes attribute to the authenticated identity.
+Writes attribute to the authenticated identity. `namespace=` (`github:owner/repo`,
+`repo:slug`, or `project:name`) is an org-allowlisted container: omit on recall
+for shared-org; set it to **exclude** other namespaces (not a boost). Invalid
+or unknown slugs fail. First write creates the slug.
 
 `memory_recall` may return hits **and** `degraded: true` when
 `errors_by_pillar` is non-empty (a pillar timed out or was unavailable).
