@@ -8,10 +8,15 @@ Codex config is **TOML** (`[mcp_servers.teamshared]`), not the JSON
 desktop app share the same files.
 
 
-> **OAuth vs this package:** The native marketplace plugin
-> ([`plugins/teamshared/`](../../plugins/teamshared/README.md)) uses MCP OAuth and
-> opens your **system browser** (host-owned). This TOML path uses
-> `TEAMSHARED_TOKEN` and skips that browser step. Prefer one path, not both.
+> **Skip the OAuth browser (reliable workaround):** this TOML path is the
+> way to Connect **without** a system or in-app browser. Mint an org-scoped
+> `tsk_` (`teamshared token mint` or [/app/keys](https://teamshared.com/app/keys)),
+> export `TEAMSHARED_TOKEN`, and register with `bearer_token_env_var`.
+> The native marketplace plugin ([`plugins/teamshared/`](../../plugins/teamshared/README.md))
+> uses MCP OAuth; the **first** browser open is Codex/ChatGPT (system
+> default browser), not TeamShared, and **not** ChatGPT `@Browser`
+> (Computer Use ≠ MCP Authenticate). TeamShared only serves
+> `/oauth/authorize` + redirect. Prefer one path, not both.
 > Details: [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
 
 This package does **not** change the Cursor plugin. Cursor desktop, Cursor
@@ -114,7 +119,7 @@ instructions (`AGENTS.md`, etc.) if you want the recall-first loop.
 | Project file does nothing | Trust the directory, or merge into `~/.codex/config.toml` instead. |
 | 401 / no tools | `echo "$TEAMSHARED_TOKEN"` in the same shell; key must start with `tsk_`. |
 | Duplicate `teamshared` | One entry only — CLI **or** file merge, not both targeting the same layer. Do not add this TOML next to the native marketplace plugin. |
-| OAuth opens Chrome / system browser | Expected. Codex opens the authorize URL externally; ChatGPT in-app `@Browser` is not used for MCP Authenticate. Use this `TEAMSHARED_TOKEN` path to skip the browser, or finish OTP in Chrome. [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46). |
+| OAuth opens Chrome / system browser | Expected. The **first** open is the Codex host; TeamShared only serves `/oauth/authorize` + redirect. ChatGPT `@Browser` is not MCP Authenticate. Use this `TEAMSHARED_TOKEN` path to skip the browser, or finish OTP in Chrome. A companion teamshared PR may soften the post-OTP `oauth_loopback.html` double-handoff — it does not change the first open. [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46). |
 | Want a second org | `teamshared org bind <slug>` — do not add a second TeamShared server. Unbound `/mcp` keeps working. |
 
 Official field reference: [Codex MCP](https://developers.openai.com/codex/mcp)

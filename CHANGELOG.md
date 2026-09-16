@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Codex MCP OAuth browser (#46 / #47):** the first open is the Codex /
+  ChatGPT host (system default browser). TeamShared only serves
+  `/oauth/authorize` and the redirect. ChatGPT `@Browser` is Computer Use,
+  not MCP Authenticate — no force-in-app-browser API. Workaround:
+  `install/codex/` + `TEAMSHARED_TOKEN` (do not mix with the OAuth plugin).
+  A companion teamshared PR may soften the post-OTP `oauth_loopback.html`
+  double-handoff; it does not change the first open.
 - **Namespace containers (protocol 1.30.0):** `rules/teamshared.mdc` matches
   the server copy. `namespace=` is an org-allowlisted hard exclude on recall
   (not a boost); write defaults from `github=` / `repo=`. Claude and Codex

@@ -56,9 +56,12 @@ need an org-scoped `TEAMSHARED_TOKEN` (seat key); without it they no-op.
 ### Codex
 
 `codex plugin add teamshared@teamshared`, connect when prompted, trust
-`/hooks`. Bind the repo. Do not install `install/codex/` next to the plugin.
-Do not add `[mcp_servers.teamshared]` unless you are on the manual seat-key
-path **instead of** the plugin.
+`/hooks`. Bind the repo. The first OAuth browser open is the Codex host
+(system browser); TeamShared only serves `/oauth/authorize` + redirect.
+ChatGPT `@Browser` is not MCP Authenticate. To skip the browser, use
+`install/codex/` + `TEAMSHARED_TOKEN` **instead of** the plugin. Do not
+install `install/codex/` next to the plugin. Do not add
+`[mcp_servers.teamshared]` unless you are on that seat-key path.
 
 ## Bots and seat keys
 

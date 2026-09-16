@@ -85,9 +85,14 @@ Unbound `/mcp` keeps working. `SessionStart` injects protocol 1.30.0;
 ### Codex (native plugin marketplace)
 
 The native Codex package uses TeamShared's MCP OAuth discovery flow, so it does
-not require `TEAMSHARED_TOKEN` or store an authorization header. Connect opens
-the **system default browser** (Codex host behavior), not ChatGPT’s in-app
-`@Browser` — see [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
+not require `TEAMSHARED_TOKEN` or store an authorization header. The **first**
+browser open is the **Codex host** (system default browser). TeamShared only
+serves `/oauth/authorize` and the redirect. ChatGPT’s in-app `@Browser` is
+Computer Use, not MCP Authenticate — there is no API to force Connect there.
+To skip the browser, use [`install/codex/`](install/codex/README.md) +
+`TEAMSHARED_TOKEN` instead of this plugin. Details:
+[#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46) and
+[`plugins/teamshared/README.md`](plugins/teamshared/README.md).
 
 ```bash
 codex plugin marketplace add teamshared-ai/teamshared-plugin
@@ -262,9 +267,10 @@ Or merge [`install/codex/mcp.toml`](install/codex/mcp.toml) into project-local
 
 Use either the native marketplace plugin or the manual TOML entry, not both.
 The manual path is the seat-key path for bots that must stay in one org
-(`teamshared token mint` scoped to that org). Do not add a second TeamShared
-server next to the plugin. Bind the checkout with `teamshared org bind <slug>`
-either way; unbound `/mcp` keeps working.
+(`teamshared token mint` scoped to that org) and the reliable way to **skip
+the OAuth browser**. Do not add a second TeamShared server next to the
+plugin. Bind the checkout with `teamshared org bind <slug>` either way;
+unbound `/mcp` keeps working.
 
 Cursor desktop, Cursor Cloud, and Grok Bot still use **Connect** — do not add
 this `tsk_` block to the plugin `mcp.json`.

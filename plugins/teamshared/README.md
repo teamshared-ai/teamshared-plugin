@@ -9,21 +9,40 @@ Authentication uses the MCP OAuth discovery metadata published by
 
 ### Browser behavior (expected)
 
-MCP **Authenticate** / `codex mcp login` is opened by the **Codex host**, not
-by TeamShared. The CLI uses the system default browser (`webbrowser`); ChatGPT /
-Codex **desktop** returns an authorize URL and opens it via the app’s external
-link bridge. That is usually **Chrome** (or your OS default), **not** the
-ChatGPT in-app `@Browser` panel.
+**The first browser open is host-owned.** MCP **Authenticate** /
+`codex mcp login` is opened by the **Codex / ChatGPT host**, not by
+TeamShared.
 
-The built-in browser ([ChatGPT Browser docs](https://learn.chatgpt.com/docs/browser))
-is for Computer Use inside a chat. It is not the MCP OAuth surface, and there is
-no Settings toggle that routes Connect into `@Browser` today. Complete the
-email/OTP in the system browser; the callback returns to Codex’s localhost
-listener.
+| Surface | Who opens the first URL |
+|---|---|
+| `codex mcp login` (CLI / TUI) | Codex CLI (`webbrowser` on the authorize URL) |
+| ChatGPT / Codex **desktop** Authenticate | Desktop app-server returns `authorization_url`; the shell opens it via the **external** link bridge (system default browser, usually Chrome) |
+| This plugin | Registers `https://teamshared.com/mcp` only — no browser launcher |
+| TeamShared | Serves `/oauth/authorize` (email/OTP) and **redirects** to the client’s `redirect_uri` |
 
-To avoid a browser entirely, use the seat-key path in
-[`install/codex/`](../../install/codex/README.md) instead of this OAuth plugin
-(not both). See [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
+TeamShared does not call `webbrowser`, `open`, or a ChatGPT deep link for
+Connect. After OTP it redirects to Codex loopback
+(`http://127.0.0.1:<port>/callback/…`) or the hosted ChatGPT connector
+callback. There is **no** public “force in-app browser” API for third-party
+MCP servers.
+
+**ChatGPT `@Browser` ≠ MCP Authenticate.** The in-app panel
+([ChatGPT Browser docs](https://learn.chatgpt.com/docs/browser)) is
+Computer Use inside a chat. It is not available in Codex CLI or the Codex
+IDE extension, and it is not the MCP OAuth surface. No Settings toggle
+routes Connect there. Finish email/OTP in the system browser; the callback
+hits Codex’s localhost listener.
+
+**Post-OTP loopback is a second hop.** After a successful OTP, TeamShared
+may serve `oauth_loopback.html`, which hands the authorization code back
+with both a hidden iframe and `location.replace`. That can feel like a
+second browser open. A companion PR on **teamshared** may soften that
+double-handoff. It cannot change who opens `/oauth/authorize`.
+
+**Reliable workaround (skip the OAuth browser):** use
+[`install/codex/`](../../install/codex/README.md) with `TEAMSHARED_TOKEN`
+and `bearer_token_env_var` instead of this OAuth plugin — not both. See
+[#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
 
 The Cursor plugin at the repo root is unchanged (email/OTP Connect + Cursor
 hook event names). Claude Code lives under `claude/` and uses
