@@ -34,10 +34,13 @@ routes Connect there. Finish email/OTP in the system browser; the callback
 hits Codex’s localhost listener.
 
 **Post-OTP loopback is a second hop.** After a successful OTP, TeamShared
-may serve `oauth_loopback.html`, which hands the authorization code back
-with both a hidden iframe and `location.replace`. That can feel like a
-second browser open. A companion PR on **teamshared** may soften that
-double-handoff. It cannot change who opens `/oauth/authorize`.
+may serve `oauth_loopback.html` for Codex loopback
+(`http://127.0.0.1:<port>/callback/<id>`). That page uses **one** auto
+handoff (top navigation for ephemeral Codex ports; iframe only for Cursor
+`:8787`) plus a **Return to app** button — not iframe and `location.replace`
+racing. Hosted `chatgpt.com/connector_platform_oauth_redirect` 302s and
+never hits the 8787 interstitial. This still cannot change who opens
+`/oauth/authorize` (teamshared PR 540).
 
 **Reliable workaround (skip the OAuth browser):** use
 [`install/codex/`](../../install/codex/README.md) with `TEAMSHARED_TOKEN`
