@@ -54,9 +54,8 @@ hook event names). Claude Code lives under `claude/` and uses
 **One Connect, one org per repo.** Connect when Codex prompts. From chat,
 call MCP `org_list` / `org_bind` when those tools exist.
 `teamshared org bind <slug>` is an optional fallback that writes
-`.teamshared/org`. Capture follows that file. Do not add a second
-TeamShared server (`[mcp_servers.teamshared]` next to this plugin).
-Unbound `/mcp` keeps working.
+`.teamshared/org`. Capture follows that file. Do not add a second TeamShared server
+(`[mcp_servers.teamshared]` next to this plugin). Unbound `/mcp` keeps working.
 Bots that must stay in one org use the manual
 [`install/codex/`](../../install/codex/README.md) path with
 `teamshared token mint` (org-scoped seat key) — not both.
