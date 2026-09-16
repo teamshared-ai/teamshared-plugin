@@ -20,6 +20,9 @@ These snippets are the durable backup for bots that must stay in one org:
 **Codex** is a first-class package: [`codex/README.md`](codex/README.md)
 (`codex mcp add` or project-local `.codex/config.toml`). Use that manual
 `TEAMSHARED_TOKEN` path **or** the native marketplace plugin, not both.
+The seat-key path skips the host-owned OAuth system browser (ChatGPT
+`@Browser` is not MCP Authenticate). See
+[#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
 
 **Claude Code** should install the marketplace plugin in `claude/` instead of
 hand-merging `install/claude/mcp.json`. Auth is Claude's native `/mcp`

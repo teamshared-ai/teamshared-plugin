@@ -727,6 +727,22 @@ else
   echo "ok  docs  native Codex marketplace + OAuth"
 fi
 
+if ! grep -q "/oauth/authorize" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "@Browser" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "oauth_loopback.html" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "TEAMSHARED_TOKEN" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "force in-app browser" "$ROOT/plugins/teamshared/README.md" \
+  || ! grep -q "/oauth/authorize" "$ROOT/README.md" \
+  || ! grep -q "@Browser" "$ROOT/README.md" \
+  || ! grep -q "Skip the OAuth browser" "$ROOT/install/codex/README.md" \
+  || ! grep -q "TEAMSHARED_TOKEN" "$ROOT/install/codex/README.md" \
+  || ! grep -q "oauth_loopback.html" "$ROOT/install/codex/README.md"; then
+  echo "FAIL  Codex OAuth docs must name host-owned first open, /oauth/authorize, @Browser ≠ Authenticate, TEAMSHARED_TOKEN workaround, and oauth_loopback.html"
+  FAIL=1
+else
+  echo "ok  docs  Codex OAuth browser reality + TEAMSHARED_TOKEN workaround"
+fi
+
 if ! grep -q "SessionStart" "$ROOT/README.md" \
   || ! grep -q "StopFailure" "$ROOT/README.md" \
   || ! grep -q "PostToolUseFailure" "$ROOT/README.md" \
