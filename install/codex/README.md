@@ -7,6 +7,13 @@ Codex config is **TOML** (`[mcp_servers.teamshared]`), not the JSON
 `mcpServers` object Cursor and Claude use. The CLI, IDE extension, and
 desktop app share the same files.
 
+
+> **OAuth vs this package:** The native marketplace plugin
+> ([`plugins/teamshared/`](../../plugins/teamshared/README.md)) uses MCP OAuth and
+> opens your **system browser** (host-owned). This TOML path uses
+> `TEAMSHARED_TOKEN` and skips that browser step. Prefer one path, not both.
+> Details: [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
+
 This package does **not** change the Cursor plugin. Cursor desktop, Cursor
 Cloud, and Grok Bot stay on account-level **Connect** (Settings → Tools & MCP →
 teamshared → Connect). Do not paste a `tsk_` key into the plugin `mcp.json`.
@@ -107,6 +114,7 @@ instructions (`AGENTS.md`, etc.) if you want the recall-first loop.
 | Project file does nothing | Trust the directory, or merge into `~/.codex/config.toml` instead. |
 | 401 / no tools | `echo "$TEAMSHARED_TOKEN"` in the same shell; key must start with `tsk_`. |
 | Duplicate `teamshared` | One entry only — CLI **or** file merge, not both targeting the same layer. Do not add this TOML next to the native marketplace plugin. |
+| OAuth opens Chrome / system browser | Expected. Codex opens the authorize URL externally; ChatGPT in-app `@Browser` is not used for MCP Authenticate. Use this `TEAMSHARED_TOKEN` path to skip the browser, or finish OTP in Chrome. [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46). |
 | Want a second org | `teamshared org bind <slug>` — do not add a second TeamShared server. Unbound `/mcp` keeps working. |
 
 Official field reference: [Codex MCP](https://developers.openai.com/codex/mcp)

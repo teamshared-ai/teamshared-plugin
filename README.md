@@ -85,7 +85,9 @@ Unbound `/mcp` keeps working. `SessionStart` injects protocol 1.30.0;
 ### Codex (native plugin marketplace)
 
 The native Codex package uses TeamShared's MCP OAuth discovery flow, so it does
-not require `TEAMSHARED_TOKEN` or store an authorization header.
+not require `TEAMSHARED_TOKEN` or store an authorization header. Connect opens
+the **system default browser** (Codex host behavior), not ChatGPT’s in-app
+`@Browser` — see [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
 
 ```bash
 codex plugin marketplace add teamshared-ai/teamshared-plugin

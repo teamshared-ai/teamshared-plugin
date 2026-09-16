@@ -7,6 +7,24 @@ SessionStart injection, and official Codex chat-capture hooks.
 Authentication uses the MCP OAuth discovery metadata published by
 `https://teamshared.com`. This package does not store API keys or headers.
 
+### Browser behavior (expected)
+
+MCP **Authenticate** / `codex mcp login` is opened by the **Codex host**, not
+by TeamShared. The CLI uses the system default browser (`webbrowser`); ChatGPT /
+Codex **desktop** returns an authorize URL and opens it via the app’s external
+link bridge. That is usually **Chrome** (or your OS default), **not** the
+ChatGPT in-app `@Browser` panel.
+
+The built-in browser ([ChatGPT Browser docs](https://learn.chatgpt.com/docs/browser))
+is for Computer Use inside a chat. It is not the MCP OAuth surface, and there is
+no Settings toggle that routes Connect into `@Browser` today. Complete the
+email/OTP in the system browser; the callback returns to Codex’s localhost
+listener.
+
+To avoid a browser entirely, use the seat-key path in
+[`install/codex/`](../../install/codex/README.md) instead of this OAuth plugin
+(not both). See [#46](https://github.com/teamshared-ai/teamshared-plugin/issues/46).
+
 The Cursor plugin at the repo root is unchanged (email/OTP Connect + Cursor
 hook event names). Claude Code lives under `claude/` and uses
 `TEAMSHARED_TOKEN` for capture hooks.
