@@ -2,7 +2,8 @@
 
 Cursor Cloud / Grok Bot inherit account-level Connect (see the plugin README) —
 do not treat `mcp_auth` as the primary path, and do not put a key in the plugin
-`mcp.json`. Connect once; bind the repo with `teamshared org bind <slug>`.
+`mcp.json`. Connect once. From chat, call MCP `org_list` / `org_bind` when those
+tools exist. `teamshared org bind <slug>` is an optional fallback.
 Do not add a second TeamShared server. Unbound `/mcp` keeps working. Bots
 that must stay in one org use `teamshared token mint` (org-scoped seat key).
 This file is the paste-in protocol for other hosts that authenticate

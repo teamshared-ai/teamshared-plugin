@@ -7,6 +7,7 @@
 **Attached to master:** [Decision: repo org binding (D1)](https://teamshared.com/app/files/a1d7703d-f571-49e8-a47f-6546d830f0df)
 **Depends:** C1 live on teamshared.com (`/o/{slug}/mcp`, [teamshared#417](https://github.com/teamshared-ai/teamshared/issues/417) / [PR #439](https://github.com/teamshared-ai/teamshared/pull/439))
 **Follow-ups shipped:** D2 capture (#37 / #41), D3 `teamshared org bind|status|unbind`, D4 install docs ([#38](https://github.com/teamshared-ai/teamshared-plugin/issues/38), [`../README.md`](../README.md), [`../AGENTS.md`](../AGENTS.md))
+**Follow-up (server):** MCP-native chat bind/switch without the CLI is [teamshared#541](https://github.com/teamshared-ai/teamshared/issues/541). Plugin skills/rules prefer MCP `org_list` / `org_bind` when those tools exist; CLI remains an optional fallback.
 
 This spike chose the binding format and recorded how each harness can pick
 it up without loading a second TeamShared MCP server. User-facing install

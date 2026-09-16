@@ -51,10 +51,12 @@ The Cursor plugin at the repo root is unchanged (email/OTP Connect + Cursor
 hook event names). Claude Code lives under `claude/` and uses
 `TEAMSHARED_TOKEN` for capture hooks.
 
-**One Connect, one org per repo.** Connect when Codex prompts. Bind the
-checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
-Capture follows that file. Do not add a second TeamShared server
-(`[mcp_servers.teamshared]` next to this plugin). Unbound `/mcp` keeps working.
+**One Connect, one org per repo.** Connect when Codex prompts. From chat,
+call MCP `org_list` / `org_bind` when those tools exist.
+`teamshared org bind <slug>` is an optional fallback that writes
+`.teamshared/org`. Capture follows that file. Do not add a second
+TeamShared server (`[mcp_servers.teamshared]` next to this plugin).
+Unbound `/mcp` keeps working.
 Bots that must stay in one org use the manual
 [`install/codex/`](../../install/codex/README.md) path with
 `teamshared token mint` (org-scoped seat key) — not both.

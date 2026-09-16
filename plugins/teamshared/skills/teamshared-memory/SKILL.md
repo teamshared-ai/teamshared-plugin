@@ -19,9 +19,10 @@ credentials, or login codes in TeamShared memory.
 The separate `install/codex/` TOML path uses `TEAMSHARED_TOKEN` (`tsk_`
 from `teamshared token mint` or https://teamshared.com/app/keys). Do **not**
 install that fallback alongside this plugin (that adds a second TeamShared
-server). Bind the checkout with `teamshared org bind <slug>`. Unbound `/mcp`
-keeps working. Point humans at the console (`/app`) for sign-in, wiki,
-people, and keys.
+server). When the user asks to bind or switch orgs, call MCP `org_list` /
+`org_bind` if those tools exist. `teamshared org bind <slug>` is an
+optional fallback. Unbound `/mcp` keeps working. Point humans at the
+console (`/app`) for sign-in, wiki, people, and keys.
 
 This skill is protocol **1.30.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Codex
@@ -67,8 +68,12 @@ Run in order:
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
 re-normalize teamshared MCP responses. If `memory_session_ensure` returns
-`warnings`, relay them once this session (suggest `teamshared org bind <slug>`).
-Do not require a bind.
+`warnings`, or the user asks to bind or switch orgs, call MCP `org_list` /
+`org_bind` when those tools exist in the live catalog. Do not tell the
+user to install the TeamShared CLI. `teamshared org bind <slug>` is an
+optional fallback when the MCP tools are missing. Relay `warnings` once
+this session. Do not require a bind. Do not invent org-tool names or
+arguments — follow the live descriptors.
 
 ## Fetch
 

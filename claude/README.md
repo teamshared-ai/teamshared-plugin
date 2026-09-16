@@ -15,12 +15,13 @@ org key in `TEAMSHARED_TOKEN` to do anything — without it they simply no-op
 This package is Claude Code only. The Cursor plugin at the repo root is
 unchanged (email/OTP Connect + Cursor hook event names).
 
-**One Connect, one org per repo.** Authenticate once via `/mcp`. Bind the
-checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
-Capture follows that file. Do not add a second TeamShared server (no project
-`.mcp.json` TeamShared entry). Unbound `/mcp` keeps working. Bots that must
-stay in one org use `teamshared token mint` (org-scoped seat key) as
-`TEAMSHARED_TOKEN` for the hooks.
+**One Connect, one org per repo.** Authenticate once via `/mcp`. From chat,
+call MCP `org_list` / `org_bind` when those tools exist.
+`teamshared org bind <slug>` is an optional fallback that writes
+`.teamshared/org`. Capture follows that file. Do not add a second TeamShared
+server (no project `.mcp.json` TeamShared entry). Unbound `/mcp` keeps
+working. Bots that must stay in one org use `teamshared token mint`
+(org-scoped seat key) as `TEAMSHARED_TOKEN` for the hooks.
 
 ## Install
 

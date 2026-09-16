@@ -95,6 +95,9 @@ secrets, tokens, or credentials. Follow the `teamshared-memory` skill
 (protocol {PROTOCOL_VERSION}) for fetch/store, CRM, and version updates.
 
 Unsure which tool? Call `memory_tools_catalog(need=\"<intent>\")`.
+If ensure returns `warnings` or the user asks to switch orgs, call MCP
+`org_list` / `org_bind` when those tools exist. `teamshared org bind <slug>`
+is an optional fallback. Do not tell the user to install the TeamShared CLI.
 
 ## Every turn
 

@@ -426,6 +426,9 @@ class HooksManifestTests(unittest.TestCase):
         self.assertEqual(capture.PROTOCOL_VERSION, "1.30.0")
         self.assertIn("1.30.0", capture.PROTOCOL_CONTEXT)
         self.assertIn("memory_changes_since", capture.PROTOCOL_CONTEXT)
+        self.assertIn("org_list", capture.PROTOCOL_CONTEXT)
+        self.assertIn("org_bind", capture.PROTOCOL_CONTEXT)
+        self.assertIn("optional fallback", capture.PROTOCOL_CONTEXT)
         self.assertLess(len(capture.PROTOCOL_CONTEXT), 10000)
 
 

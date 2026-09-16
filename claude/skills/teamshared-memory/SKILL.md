@@ -23,10 +23,11 @@ from `TEAMSHARED_TOKEN` (`Authorization: Bearer tsk_…`), minted with
 `teamshared token mint` (org-scoped seat key) or at
 https://teamshared.com/app/keys. They're optional — unset, they simply don't
 capture anything, and the MCP connection and every-turn workflow are
-unaffected. Never store or print the token. Bind the checkout with
-`teamshared org bind <slug>`; do not add a second TeamShared server.
-Unbound `/mcp` keeps working. Point humans at the console (`/app`) for
-sign-in, wiki, people, and keys.
+unaffected. Never store or print the token. When the user asks to bind
+or switch orgs, call MCP `org_list` / `org_bind` if those tools exist.
+`teamshared org bind <slug>` is an optional fallback; do not add a
+second TeamShared server. Unbound `/mcp` keeps working. Point humans at
+the console (`/app`) for sign-in, wiki, people, and keys.
 
 This skill is protocol **1.30.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Claude Code
@@ -68,8 +69,12 @@ Run in order:
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
 re-normalize teamshared MCP responses. If `memory_session_ensure` returns
-`warnings`, relay them once this session (suggest `teamshared org bind <slug>`).
-Do not require a bind.
+`warnings`, or the user asks to bind or switch orgs, call MCP `org_list` /
+`org_bind` when those tools exist in the live catalog. Do not tell the
+user to install the TeamShared CLI. `teamshared org bind <slug>` is an
+optional fallback when the MCP tools are missing. Relay `warnings` once
+this session. Do not require a bind. Do not invent org-tool names or
+arguments — follow the live descriptors.
 
 ## Fetch
 

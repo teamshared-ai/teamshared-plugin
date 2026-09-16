@@ -25,6 +25,11 @@ install TeamShared into a checkout. Human install: [`README.md`](README.md).
 
 ## Bind
 
+From an authenticated MCP chat, call `org_list` / `org_bind` when those
+tools exist in the live catalog. Do not tell the user to install the
+TeamShared CLI. The local CLI is an optional fallback that writes
+`.teamshared/org`:
+
 ```bash
 teamshared org bind <slug> --token "$TEAMSHARED_TOKEN"
 teamshared org status

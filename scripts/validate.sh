@@ -449,6 +449,9 @@ for needle in (
     "TEAMSHARED_TOKEN",
     "SessionStart",
     "UserPromptSubmit",
+    "org_list",
+    "org_bind",
+    "optional fallback",
 ):
     if needle not in skill:
         print(f"FAIL  Claude teamshared-memory skill must mention {needle!r}")
@@ -475,6 +478,7 @@ PY
   python3 "$ROOT/claude/hooks/test_capture.py" -q
   python3 "$ROOT/plugins/teamshared/hooks/test_capture.py" -q
   python3 "$ROOT/scripts/test_org_binding.py" -q
+  python3 "$ROOT/scripts/test_org_bind_guidance.py" -q
   if ! cmp -s "$ROOT/scripts/org_binding.py" "$ROOT/claude/hooks/org_binding.py"; then
     echo "FAIL  claude/hooks/org_binding.py must match scripts/org_binding.py"
     FAIL=1
@@ -666,6 +670,9 @@ for needle in (
     "StopFailure",
     "PostToolUseFailure",
     "OAuth",
+    "org_list",
+    "org_bind",
+    "optional fallback",
 ):
     if needle not in skill:
         print(f"FAIL  Codex teamshared-memory skill must mention {needle!r}")
@@ -879,6 +886,9 @@ for needle in (
     "sessionEnd",
     "postToolUse",
     "preCompact",
+    "org_list",
+    "org_bind",
+    "optional fallback",
 ):
     if needle not in rule:
         print(f"FAIL  rules/teamshared.mdc must mention {needle!r}")
