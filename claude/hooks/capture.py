@@ -38,7 +38,7 @@ from org_binding import DEFAULT_MCP_URL, resolve_org_binding
 
 MCP_URL = DEFAULT_MCP_URL  # unbound fallback; live calls use resolve_mcp_url()
 PLUGIN_VERSION = "0.13.0"
-PROTOCOL_VERSION = "1.30.0"
+PROTOCOL_VERSION = "1.31.0"
 MAX_COMMAND_CHARS = 200
 MAX_ERROR_TAIL_CHARS = 800
 MAX_SUMMARY_CHARS = 900
@@ -82,6 +82,13 @@ tokens, or credentials. Follow the `teamshared-memory` skill (protocol {PROTOCOL
 for fetch/store, CRM, and version updates.
 
 Unsure which tool? Call `memory_tools_catalog(need="<intent>")`.
+If ensure returns `warnings` or the user asks to switch orgs, call
+`org_list` / `org_context_get` then `org_bind(slug=..., scope=conversation|workspace)`.
+Conversation needs Mcp-Session-Id (else reason=no_session). Workspace is
+account + repo slug. `org_unbind` clears the overlay. Precedence: path
+`/o/{{slug}}/mcp` > conversation > workspace > OAuth/tsk_ default.
+`teamshared org bind <slug>` is an optional fallback. Do not tell the
+user to install the TeamShared CLI.
 
 ## Every turn
 

@@ -1,7 +1,7 @@
 # TeamShared for Codex
 
 This native Codex plugin registers the hosted TeamShared MCP server and treats
-Codex as a first-class TeamShared client: recall-first protocol **1.30.0**,
+Codex as a first-class TeamShared client: recall-first protocol **1.31.0**,
 SessionStart injection, and official Codex chat-capture hooks.
 
 Authentication uses the MCP OAuth discovery metadata published by
@@ -51,9 +51,11 @@ The Cursor plugin at the repo root is unchanged (email/OTP Connect + Cursor
 hook event names). Claude Code lives under `claude/` and uses
 `TEAMSHARED_TOKEN` for capture hooks.
 
-**One Connect, one org per repo.** Connect when Codex prompts. Bind the
-checkout with `teamshared org bind <slug>` (writes `.teamshared/org`).
-Capture follows that file. Do not add a second TeamShared server
+**One Connect, one org per repo.** Connect when Codex prompts. From chat,
+call `org_list` / `org_context_get` then
+`org_bind(slug=..., scope=conversation|workspace)`. `org_unbind` clears
+the overlay. `teamshared org bind <slug>` is an optional fallback that writes
+`.teamshared/org`. Capture follows that file. Do not add a second TeamShared server
 (`[mcp_servers.teamshared]` next to this plugin). Unbound `/mcp` keeps working.
 Bots that must stay in one org use the manual
 [`install/codex/`](../../install/codex/README.md) path with
@@ -73,10 +75,10 @@ Then:
 1. `/hooks` — review and **trust** the TeamShared plugin hooks. Codex skips
    plugin-bundled hooks until you trust the current definition
    ([hooks reference](https://developers.openai.com/codex/hooks)).
-2. Start a new task so `SessionStart` injects protocol 1.30.0.
+2. Start a new task so `SessionStart` injects protocol 1.31.0.
 3. Confirm `/mcp` lists TeamShared tools.
 4. `$status` (or `$teamshared-status`) — health + `version`
-   (`installed_rule_version` 1.30.0).
+   (`installed_rule_version` 1.31.0).
 5. Work normally. Every turn: `memory_session_ensure` → `memory_recall` →
    work → `context_commit`. You do not need to name TeamShared.
 
@@ -94,7 +96,7 @@ should not be installed alongside this plugin. Bind either path with
 | `assets/logo.png` / `assets/icon.png` | Brand mark for ChatGPT Sources and the Codex plugin directory (paths stay inside this package) |
 | `.mcp.json` | Streamable HTTP MCP to `https://teamshared.com/mcp` (OAuth, no headers) |
 | `hooks/hooks.json` | Official Codex events only (see below). Auto-discovered; also declared in the manifest |
-| `skills/teamshared-memory/` | Protocol **1.30.0** (same loop as `rules/teamshared.mdc`) |
+| `skills/teamshared-memory/` | Protocol **1.31.0** (same loop as `rules/teamshared.mdc`) |
 | `skills/status/` | `$status` / `$teamshared-status` health + version check |
 
 ## Always-on (without naming TeamShared)
@@ -103,11 +105,11 @@ Codex has no Cursor `alwaysApply` rule. This package stacks three supported
 mechanisms:
 
 1. **Skill description** + `allow_implicit_invocation` so Codex loads the
-   1.30.0 loop when TeamShared MCP tools are present.
+   1.31.0 loop when TeamShared MCP tools are present.
 2. **`interface.defaultPrompt`** starter chips that ask to recall / continue /
    save without requiring the user to say "TeamShared".
 3. **`SessionStart` `additionalContext`** — official Codex hook output that
-   injects protocol 1.30.0 at session start (`startup`, `resume`, `clear`,
+   injects protocol 1.31.0 at session start (`startup`, `resume`, `clear`,
    `compact`).
 
 ## Hooks (official Codex events)
@@ -117,7 +119,7 @@ This package does **not** invent Cursor camelCase names or Claude-only events.
 
 | Event | What it does |
 |---|---|
-| `SessionStart` | Injects protocol 1.30.0 via `additionalContext`; maps Codex `session_id` → `memory_session_ensure` |
+| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Codex `session_id` → `memory_session_ensure` |
 | `UserPromptSubmit` | Appends the redacted user prompt (`ensure(user=)`) |
 | `Stop` | Appends the redacted assistant text (`last_assistant_message`). Does **not** distill — Stop fires every turn |
 | `SessionEnd` | `memory_session_close` + distill (timeout capped at Codex's 3s maximum) |
@@ -138,7 +140,7 @@ the turn) or `PostToolUse` (that replaces the tool result).
 
 ## Version updates
 
-On the first turn, call `version` with `installed_rule_version` `1.30.0`.
+On the first turn, call `version` with `installed_rule_version` `1.31.0`.
 If `update_available: true`, upgrade this marketplace plugin. You may add a
 short note to `~/.codex/AGENTS.md` (or the repo `AGENTS.md`). Do not write
 Cursor `~/.cursor/rules/teamshared.mdc` or Claude

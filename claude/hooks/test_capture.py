@@ -215,7 +215,7 @@ class TurnCaptureTests(unittest.TestCase):
                         )
         output = extra["hookSpecificOutput"]
         self.assertEqual(output["hookEventName"], "SessionStart")
-        self.assertIn("1.30.0", output["additionalContext"])
+        self.assertIn("1.31.0", output["additionalContext"])
         self.assertIn("memory_changes_since", output["additionalContext"])
         self.assertIn("memory_session_ensure", output["additionalContext"])
         self.assertIn("work_id", output["additionalContext"])
@@ -423,9 +423,15 @@ class HooksManifestTests(unittest.TestCase):
             "pre_compact.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)
-        self.assertEqual(capture.PROTOCOL_VERSION, "1.30.0")
-        self.assertIn("1.30.0", capture.PROTOCOL_CONTEXT)
+        self.assertEqual(capture.PROTOCOL_VERSION, "1.31.0")
+        self.assertIn("1.31.0", capture.PROTOCOL_CONTEXT)
         self.assertIn("memory_changes_since", capture.PROTOCOL_CONTEXT)
+        self.assertIn("org_list", capture.PROTOCOL_CONTEXT)
+        self.assertIn("org_context_get", capture.PROTOCOL_CONTEXT)
+        self.assertIn("org_bind", capture.PROTOCOL_CONTEXT)
+        self.assertIn("org_unbind", capture.PROTOCOL_CONTEXT)
+        self.assertIn("scope=conversation", capture.PROTOCOL_CONTEXT)
+        self.assertIn("optional fallback", capture.PROTOCOL_CONTEXT)
         self.assertLess(len(capture.PROTOCOL_CONTEXT), 10000)
 
 

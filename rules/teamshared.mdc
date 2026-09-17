@@ -1,12 +1,12 @@
 ---
 description: Use the teamshared MCP server as persistent cross-session memory.
 alwaysApply: true
-version: 1.30.0
+version: 1.31.0
 ---
 
 # teamshared Memory Protocol
 
-<!-- teamshared-rule-version: 1.30.0 -->
+<!-- teamshared-rule-version: 1.31.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -28,7 +28,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this rule's frontmatter `version` (`1.30.0`) as
+versions), call `version` with this rule's frontmatter `version` (`1.31.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
@@ -58,10 +58,10 @@ output, `context_normalize` and reason over the trimmed `output`. Do not
 re-normalize teamshared MCP responses.
 
 `ensure` / `recall` / `remember` / `context_commit` / `work_*` writes return
-`org: {slug, name, kind}` and `bound` (`true` only on `/o/{slug}/mcp`). If
-`org` is not the user's org, say so and stop. Do not pass `org_id`. If
-`memory_session_ensure` returns `warnings`, relay them once this session
-(suggest `teamshared org bind <slug>`). Do not require a bind.
+`org: {slug, name, kind}`, `bound`, and `bound_scope`. Switch orgs with
+`org_list` then `org_bind(slug=...)` (CLI `teamshared org bind` is optional).
+If `org` is not the user's org, say so and stop. Do not pass `org_id`. If
+`ensure` returns `warnings`, relay once; call `org_bind`, do not require a bind.
 
 ## Fetch
 

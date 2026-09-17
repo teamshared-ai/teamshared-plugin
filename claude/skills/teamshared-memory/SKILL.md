@@ -1,11 +1,11 @@
 ---
 name: teamshared-memory
-description: Recall-first TeamShared memory protocol 1.30.0 for Claude Code. Use on every turn when TeamShared MCP tools are available, and when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
+description: Recall-first TeamShared memory protocol 1.31.0 for Claude Code. Use on every turn when TeamShared MCP tools are available, and when searching or storing team memory, past work, preferences, playbooks, soul, or agent memory.
 ---
 
 # TeamShared memory (Claude Code)
 
-<!-- teamshared-rule-version: 1.30.0 -->
+<!-- teamshared-rule-version: 1.31.0 -->
 
 The `teamshared` MCP server is your durable brain across sessions and repos.
 Authenticated identity sets write attribution; do not pass `agent` unless you
@@ -23,12 +23,14 @@ from `TEAMSHARED_TOKEN` (`Authorization: Bearer tsk_…`), minted with
 `teamshared token mint` (org-scoped seat key) or at
 https://teamshared.com/app/keys. They're optional — unset, they simply don't
 capture anything, and the MCP connection and every-turn workflow are
-unaffected. Never store or print the token. Bind the checkout with
-`teamshared org bind <slug>`; do not add a second TeamShared server.
-Unbound `/mcp` keeps working. Point humans at the console (`/app`) for
-sign-in, wiki, people, and keys.
+unaffected. Never store or print the token. When the user asks to bind
+or switch orgs, call `org_list` / `org_context_get`, then
+`org_bind(slug=..., scope=conversation|workspace)`. `org_unbind` clears
+the overlay. `teamshared org bind <slug>` is an optional fallback; do
+not add a second TeamShared server. Unbound `/mcp` keeps working. Point
+humans at the console (`/app`) for sign-in, wiki, people, and keys.
 
-This skill is protocol **1.30.0** — the same fetch/store loop as
+This skill is protocol **1.31.0** — the same fetch/store loop as
 `rules/teamshared.mdc` in the teamshared-plugin repo, adapted for Claude Code
 (OAuth MCP connection, `TEAMSHARED_TOKEN` hooks, Claude write path). SessionStart
 also injects the every-turn loop.
@@ -40,7 +42,7 @@ discovery path (that hides files and projects).
 ## Staying current
 
 On the **first turn of a chat** (or when the user asks about teamshared
-versions), call `version` with this skill's protocol version (`1.30.0`) as
+versions), call `version` with this skill's protocol version (`1.31.0`) as
 `installed_rule_version`. Do not call `version` every turn. If
 `update_available: true`, write the returned `rule_markdown` verbatim to
 `~/.claude/rules/teamshared.md` (or `.claude/rules/teamshared.md` in a repo)
@@ -67,9 +69,19 @@ Run in order:
 
 Do not append `[tool]` turns for teamshared MCP calls. After bulky Bash/Read
 output, `context_normalize` and reason over the trimmed `output`. Do not
-re-normalize teamshared MCP responses. If `memory_session_ensure` returns
-`warnings`, relay them once this session (suggest `teamshared org bind <slug>`).
-Do not require a bind.
+re-normalize teamshared MCP responses.
+
+`ensure` / `recall` / `remember` / `context_commit` / `work_*` writes return
+`org: {slug, name, kind}`, `bound`, and `bound_scope`. Switch orgs with
+`org_list` / `org_context_get`, then `org_bind(slug=..., scope=conversation|workspace)`.
+Conversation bind is this `Mcp-Session-Id` only (else `reason=no_session`).
+Workspace bind is account + repo slug. `org_unbind` clears the overlay.
+Precedence: path `/o/{slug}/mcp` > conversation > workspace > OAuth/`tsk_`
+token default. Membership is fail-closed. `tsk_` seat keys cannot switch.
+Path mounts cannot be overridden. This is not a global account switch.
+If `memory_session_ensure` returns `warnings`, relay once and call
+`org_bind(slug=...)`. Do not tell the user to install the TeamShared CLI.
+`teamshared org bind <slug>` is an optional fallback. Do not require a bind.
 
 ## Fetch
 

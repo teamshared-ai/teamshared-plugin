@@ -25,6 +25,16 @@ install TeamShared into a checkout. Human install: [`README.md`](README.md).
 
 ## Bind
 
+From an authenticated MCP chat, call `org_list` / `org_context_get`, then
+`org_bind(slug=..., scope=conversation|workspace)`. Conversation bind is
+this `Mcp-Session-Id` only (else `reason=no_session`). Workspace bind is
+account + repo slug. `org_unbind` clears the overlay. Precedence: path
+`/o/{slug}/mcp` > conversation > workspace > OAuth/`tsk_` default.
+Membership is fail-closed; `tsk_` keys cannot switch; path mounts cannot
+be overridden; this is not a global account switch. Do not tell the user
+to install the TeamShared CLI. The local CLI is an optional fallback that
+writes `.teamshared/org`:
+
 ```bash
 teamshared org bind <slug> --token "$TEAMSHARED_TOKEN"
 teamshared org status
