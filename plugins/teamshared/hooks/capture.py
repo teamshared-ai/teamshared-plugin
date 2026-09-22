@@ -55,6 +55,10 @@ MAX_SUMMARY_CHARS = 900
 MAX_FACT_CHARS = 1000
 MAX_TURN_CHARS = 4000
 MAX_TOPIC_CHARS = 200
+MAX_SESSION_START_ANCHOR_CHARS = 400
+MAX_AUTO_RECALL_HITS = 5
+MAX_AUTO_RECALL_LINE_CHARS = 140
+MAX_AUTO_RECALL_BLOCK_CHARS = 800
 MCP_TIMEOUT_SEC = 6
 SESSION_END_MCP_TIMEOUT_SEC = 2.0
 HOOK_CACHE_ENV = "TEAMSHARED_CODEX_HOOK_CACHE"
@@ -524,6 +528,34 @@ def user_prompt_text(payload: dict[str, Any]) -> str:
     return clamp(text, MAX_TURN_CHARS)
 
 
+def session_start_title(payload: dict[str, Any] | None) -> str:
+    """Conversation/title text from a SessionStart payload, if the harness sent one."""
+    payload = payload or {}
+    for key in ("title", "conversation_title", "session_title", "thread_title"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return clamp(strip_secrets(val.strip()), MAX_TOPIC_CHARS)
+    conversation = payload.get("conversation")
+    if isinstance(conversation, dict):
+        for key in ("title", "name"):
+            val = conversation.get(key)
+            if isinstance(val, str) and val.strip():
+                return clamp(strip_secrets(val.strip()), MAX_TOPIC_CHARS)
+    return ""
+
+
+def session_start_user(payload: dict[str, Any] | None) -> str:
+    """Short user/title anchor for SessionStart auto_recall. Empty if none."""
+    payload = payload or {}
+    prompt = user_prompt_text(payload)
+    if prompt:
+        return clamp(prompt, MAX_SESSION_START_ANCHOR_CHARS)
+    title = session_start_title(payload)
+    if title:
+        return clamp(title, MAX_SESSION_START_ANCHOR_CHARS)
+    return ""
+
+
 def assistant_response_text(payload: dict[str, Any]) -> str:
     for key in ("last_assistant_message", "text", "response", "assistant_text"):
         val = payload.get(key)
@@ -662,34 +694,83 @@ def mcp_call(
     return inner if isinstance(inner, dict) else result or {}
 
 
-def _session_id_from_result(result: dict[str, Any] | None) -> str | None:
-    if not result:
-        return None
-    for key in ("session_id", "sessionId"):
-        val = result.get(key)
-        if isinstance(val, str) and val.strip():
-            return val.strip()
-    structured = result.get("structuredContent")
-    if isinstance(structured, dict):
-        for key in ("session_id", "sessionId"):
-            val = structured.get(key)
-            if isinstance(val, str) and val.strip():
-                return val.strip()
+def _parsed_json_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except ValueError:
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
+
+def _tool_payload(result: dict[str, Any] | None) -> dict[str, Any]:
+    """Unwrap MCP tools/call envelopes to the memory_session_ensure object."""
+    if not isinstance(result, dict) or not result:
+        return {}
+    structured = _parsed_json_dict(result.get("structuredContent"))
+    if structured:
+        return structured
     for item in result.get("content") or []:
         if not isinstance(item, dict):
             continue
-        text = item.get("text")
-        if not isinstance(text, str):
-            continue
-        try:
-            parsed = json.loads(text)
-        except ValueError:
-            continue
-        if isinstance(parsed, dict):
-            val = parsed.get("session_id") or parsed.get("sessionId")
-            if isinstance(val, str) and val.strip():
-                return val.strip()
+        parsed = _parsed_json_dict(item.get("text"))
+        if parsed:
+            return parsed
+    return result
+
+
+def _session_id_from_result(result: dict[str, Any] | None) -> str | None:
+    payload = _tool_payload(result)
+    for key in ("session_id", "sessionId"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
     return None
+
+
+def _nonempty_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    return ""
+
+
+def format_auto_recall_hits(ensured: dict[str, Any] | None) -> str:
+    """Compact bullet list from ensure ``auto_recall.hits`` / ``records``."""
+    payload = _tool_payload(ensured)
+    block = payload.get("auto_recall")
+    if not isinstance(block, dict) or block.get("skipped"):
+        return ""
+    hits = block.get("hits")
+    if not isinstance(hits, list):
+        hits = block.get("records")
+    if not isinstance(hits, list) or not hits:
+        return ""
+    lines: list[str] = []
+    for hit in hits[:MAX_AUTO_RECALL_HITS]:
+        if not isinstance(hit, dict):
+            continue
+        subject = _nonempty_text(hit.get("subject"))
+        content = _nonempty_text(
+            hit.get("content") or hit.get("text") or hit.get("body")
+        )
+        if content:
+            content = " ".join(content.split())
+        if subject and content:
+            line = f"- {subject}: {content}"
+        elif subject:
+            line = f"- {subject}"
+        elif content:
+            line = f"- {content}"
+        else:
+            continue
+        lines.append(clamp(line, MAX_AUTO_RECALL_LINE_CHARS))
+    if not lines:
+        return ""
+    return clamp(strip_secrets("## Recalled\n" + "\n".join(lines)), MAX_AUTO_RECALL_BLOCK_CHARS)
 
 
 def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | None]:
@@ -698,14 +779,16 @@ def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | 
     return repo_slug(cwd), github, conversation_id(payload)
 
 
-def ensure_session(
+def ensure_session_payload(
     payload: dict[str, Any] | None = None,
     *,
     fresh: bool = False,
     user: str | None = None,
+    topic: str | None = None,
+    auto_recall: bool = False,
     token: str | None = None,
-) -> str | None:
-    """Map this Codex session onto a TeamShared working session."""
+) -> dict[str, Any] | None:
+    """Call memory_session_ensure and persist the conversation→session map."""
     token = token if token is not None else resolve_token()
     if not token:
         return None
@@ -717,20 +800,39 @@ def ensure_session(
         fresh = False
     ensure_args: dict[str, Any] = {
         "repo": repo,
-        "topic": session_topic(cid),
+        "topic": topic or session_topic(cid),
         "fresh": fresh,
     }
     if github:
         ensure_args["github"] = github
     if user:
         ensure_args["user"] = clamp(strip_secrets(user), MAX_TURN_CHARS)
+    if auto_recall:
+        ensure_args["auto_recall"] = True
     ensured = mcp_call(
         "memory_session_ensure", ensure_args, token, url=resolve_mcp_url(payload)
     )
     session_id = _session_id_from_result(ensured) or (cached if not fresh else None)
     if session_id:
         store_mapped_session(cid, session_id)
-    return session_id
+    if ensured:
+        return _tool_payload(ensured) or ensured
+    if session_id:
+        return {"session_id": session_id}
+    return None
+
+
+def ensure_session(
+    payload: dict[str, Any] | None = None,
+    *,
+    fresh: bool = False,
+    user: str | None = None,
+    token: str | None = None,
+) -> str | None:
+    """Map this Codex session onto a TeamShared working session."""
+    return _session_id_from_result(
+        ensure_session_payload(payload, fresh=fresh, user=user, token=token)
+    )
 
 
 def append_turn(
@@ -847,11 +949,30 @@ def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
     source = str(payload.get("source") or "startup").strip().lower()
     if source == "clear":
         drop_mapped_session(conversation_id(payload))
-    ensure_session(payload, fresh=_session_start_fresh(payload))
+    ensured: dict[str, Any] | None = None
+    try:
+        title = session_start_title(payload) or None
+        user = session_start_user(payload) or None
+        ensured = ensure_session_payload(
+            payload,
+            fresh=_session_start_fresh(payload),
+            user=user,
+            topic=title,
+            auto_recall=True,
+        )
+    except Exception:
+        ensured = None
+    context = PROTOCOL_CONTEXT
+    try:
+        recalled = format_auto_recall_hits(ensured)
+    except Exception:
+        recalled = ""
+    if recalled:
+        context = f"{PROTOCOL_CONTEXT.rstrip()}\n\n{recalled}"
     return {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": PROTOCOL_CONTEXT,
+            "additionalContext": context,
         }
     }
 
