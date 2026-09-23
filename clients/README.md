@@ -27,4 +27,6 @@ Durable backup for other hosts: one org `tsk_` on the MCP headers
 **Memory rule:** ``../rules/teamshared.mdc`` (canonical).
 
 **Agent protocol:** ``protocol.md`` — paste into Hermes SOUL, Claude project
-instructions, etc.
+instructions, etc. Cursor `postToolUseFailure` / failed `postToolUse` may
+inject compact `memory_recall` hits as `additional_context` (read-only);
+explicit `memory_recall` remains preferred for keyword work.

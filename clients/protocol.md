@@ -60,6 +60,12 @@ user's query. Use the returned hits to ground your answer and cite them.
 
 If recall returns nothing relevant, say so before answering from priors.
 
+Cursor `postToolUseFailure` (and failed `postToolUse`) hooks may call
+`memory_recall` with a tight tool-name + error query (`k=3`, short token
+budget) and inject compact hits as `additional_context`. Skip when empty
+or MCP unbound. That path is read-only — no `context_commit`. Explicit
+`memory_recall` remains preferred for keyword work.
+
 ## Code work: workspace + GitHub scope
 
 Always resolve `repo=` for session logging and code-scoped memory:
