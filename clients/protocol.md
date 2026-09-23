@@ -63,6 +63,12 @@ SessionStart hooks may request thin-client `memory_session_ensure(auto_recall=tr
 and inject a compact hit list; explicit `memory_recall` remains preferred for
 keyword work.
 
+Cursor `postToolUseFailure` (and failed `postToolUse`) hooks may call
+`memory_recall` with a tight tool-name + error query (`k=3`, short token
+budget) and inject compact hits as `additional_context`. Skip when empty
+or MCP unbound. That path is read-only — no `context_commit`. Explicit
+`memory_recall` remains preferred for keyword work.
+
 ## Code work: workspace + GitHub scope
 
 Always resolve `repo=` for session logging and code-scoped memory:

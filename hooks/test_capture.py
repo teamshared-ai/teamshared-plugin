@@ -26,6 +26,7 @@ REQUIRED_HOOKS = {
     "stop",
     "sessionEnd",
     "postToolUse",
+    "postToolUseFailure",
     "preCompact",
 }
 
@@ -102,6 +103,207 @@ class FailedToolTests(unittest.TestCase):
         self.assertLessEqual(len(fact), capture.MAX_FACT_CHARS)
         self.assertLess(len(fact), len(long_log))
         self.assertTrue(fact.startswith("Cursor postToolUse:"))
+
+
+class FailureRecallTests(unittest.TestCase):
+    def test_query_is_tool_plus_truncated_error(self) -> None:
+        long_err = ("ok line\n" * 80) + "AssertionError: expected 2 got 3\n"
+        payload = {
+            "hook_event_name": "postToolUseFailure",
+            "tool_name": "Shell",
+            "error_message": long_err,
+        }
+        query = capture.failure_recall_query(payload)
+        self.assertTrue(query.startswith("Shell "))
+        self.assertIn("AssertionError", query)
+        self.assertLessEqual(len(query), capture.MAX_FAILURE_RECALL_QUERY_CHARS)
+        self.assertTrue(capture.is_post_tool_use_failure_event(payload))
+
+    def test_query_strips_secrets_and_skips_empty(self) -> None:
+        payload = {
+            "tool_name": "Shell",
+            "error_message": "boom Bearer leaked-token-value tsk_abcDEF12345678",
+        }
+        query = capture.failure_recall_query(payload)
+        self.assertNotIn("leaked-token-value", query)
+        self.assertNotIn("tsk_abcDEF12345678", query)
+        self.assertIn("[redacted]", query)
+        self.assertEqual(capture.failure_recall_query({"tool_name": "Read"}), "")
+
+    def test_catalog_without_bug_fix_kind_uses_semantic_recall(self) -> None:
+        self.assertIsNone(capture.failure_recall_filters())
+        self.assertNotIn("bug_fix", capture._CATALOG_RECALL_KINDS)
+        self.assertNotIn("anti_pattern", capture._CATALOG_RECALL_KINDS)
+
+    def test_catalog_bug_fix_kind_sends_filter(self) -> None:
+        with patch.object(
+            capture, "_CATALOG_RECALL_KINDS", frozenset({"bug_fix", "fact"})
+        ):
+            self.assertEqual(capture.failure_recall_filters(), {"kind": "bug_fix"})
+        calls: list[dict] = []
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            calls.append(arguments)
+            return {"records": [{"content": "pin the lockfile"}]}
+
+        payload = {
+            "tool_name": "Shell",
+            "error_message": "ELIFECYCLE npm test",
+            "cwd": str(Path.cwd()),
+        }
+        with patch.object(
+            capture, "_CATALOG_RECALL_KINDS", frozenset({"bug_fix", "fact"})
+        ):
+            with patch.object(capture, "mcp_call", side_effect=fake_call):
+                with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                    extra = capture.handle_post_tool_use_failure(payload)
+        self.assertEqual(calls[0]["filters"], {"kind": "bug_fix"})
+        self.assertIn("pin the lockfile", extra["additional_context"])
+
+    def test_recall_injects_additional_context_and_never_writes(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            calls.append((name, arguments))
+            return {
+                "records": [
+                    {
+                        "kind": "note",
+                        "subject": "other",
+                        "content": "unrelated note",
+                    },
+                    {
+                        "kind": "bug_fix",
+                        "subject": "npm test",
+                        "content": "pin jest and clear cache. Bearer leaked-token-value",
+                        "tags": ["bug_fix"],
+                    },
+                    {
+                        "kind": "fact",
+                        "subject": "decision",
+                        "content": "use vitest in this repo",
+                        "tags": ["decision"],
+                    },
+                ]
+            }
+
+        payload = {
+            "hook_event_name": "postToolUseFailure",
+            "tool_name": "Shell",
+            "error_message": "FAIL src/add.test.ts Expected 2, got 3",
+            "cwd": str(Path.cwd()),
+        }
+        with patch.object(capture, "mcp_call", side_effect=fake_call):
+            with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                extra = capture.handle_post_tool_use_failure(payload)
+        self.assertEqual([name for name, _ in calls], ["memory_recall"])
+        args = calls[0][1]
+        self.assertEqual(args["k"], 3)
+        self.assertFalse(args["verbose"])
+        self.assertIn("Shell", args["query"])
+        self.assertIn("Expected 2", args["query"])
+        self.assertNotIn("filters", args)
+        self.assertNotIn("context_commit", [name for name, _ in calls])
+        ctx = extra["additional_context"]
+        self.assertIn("## Recalled", ctx)
+        self.assertIn("npm test", ctx)
+        self.assertIn("pin jest", ctx)
+        self.assertNotIn("leaked-token-value", ctx)
+        # Preferred bug_fix / decision-like hits come first.
+        self.assertLess(ctx.index("npm test"), ctx.index("use vitest"))
+        self.assertLess(ctx.index("use vitest"), ctx.index("unrelated note"))
+        self.assertLessEqual(len(ctx), capture.MAX_FAILURE_RECALL_BLOCK_CHARS)
+
+    def test_empty_or_unbound_skips_injection(self) -> None:
+        payload = {
+            "tool_name": "Shell",
+            "error_message": "boom",
+            "cwd": str(Path.cwd()),
+        }
+        with patch.object(capture, "resolve_token", return_value=None):
+            with patch.object(capture, "mcp_call", side_effect=AssertionError("network")):
+                self.assertEqual(capture.handle_post_tool_use_failure(payload), {})
+        with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+            with patch.object(capture, "mcp_call", return_value=None):
+                self.assertEqual(capture.handle_post_tool_use_failure(payload), {})
+            with patch.object(capture, "mcp_call", return_value={"records": []}):
+                self.assertEqual(capture.handle_post_tool_use_failure(payload), {})
+        self.assertEqual(
+            capture.handle_post_tool_use_failure(
+                {"tool_name": "Shell", "is_interrupt": True, "error_message": "canceled"}
+            ),
+            {},
+        )
+
+    def test_failed_post_tool_use_recalls_without_replacing_write(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            calls.append((name, arguments))
+            if name == "memory_recall":
+                return {"hits": [{"content": "prior fix: clear node_modules"}]}
+            if name == "memory_session_ensure":
+                return {"session_id": "sess-1"}
+            return {"session_id": "sess-1"}
+
+        payload = {
+            "tool_name": "Shell",
+            "tool_input": {"command": "npm test"},
+            "tool_output": {
+                "exitCode": 1,
+                "stderr": "FAIL src/add.test.ts\nExpected 2, got 3\n",
+            },
+            "cwd": str(Path.cwd()),
+            "conversation_id": "conv-fail",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        extra = capture.handle_failed_post_tool_use_recall(payload)
+                        capture.ingest(
+                            "Cursor postToolUse: `npm test` exit 1.",
+                            fact="Cursor postToolUse: `npm test` exit 1.\nFAIL",
+                            payload=payload,
+                            token="oauth-from-connect",
+                        )
+        names = [name for name, _ in calls]
+        self.assertIn("memory_recall", names)
+        self.assertIn("context_commit", names)
+        self.assertEqual(names.count("memory_recall"), 1)
+        self.assertIn("additional_context", extra)
+        self.assertIn("prior fix", extra["additional_context"])
+        self.assertEqual(
+            capture.handle_failed_post_tool_use_recall(
+                {
+                    "tool_name": "Shell",
+                    "tool_input": {"command": "npm test"},
+                    "tool_output": {"exitCode": 0, "stdout": "ok"},
+                }
+            ),
+            {},
+        )
+
+    def test_format_recall_hits_caps_and_skips_empty(self) -> None:
+        body = "ranking uses RRF. " + ("x" * 4000)
+        ctx = capture.format_recall_hits(
+            {
+                "records": [
+                    {"subject": "retrieval", "content": body},
+                    {"content": "second hit"},
+                    {"content": "third hit"},
+                    {"content": "dropped by k"},
+                ]
+            }
+        )
+        self.assertIn("## Recalled", ctx)
+        self.assertIn("retrieval", ctx)
+        self.assertNotIn("dropped by k", ctx)
+        self.assertNotIn("x" * 500, ctx)
+        self.assertLessEqual(len(ctx), capture.MAX_FAILURE_RECALL_BLOCK_CHARS)
+        self.assertEqual(capture.format_recall_hits({"records": []}), "")
+        self.assertEqual(capture.format_recall_hits(None), "")
 
 
 class PreCompactTests(unittest.TestCase):
@@ -759,9 +961,12 @@ class HooksManifestTests(unittest.TestCase):
             "stop.py",
             "session_end.py",
             "post_tool_use.py",
+            "post_tool_use_failure.py",
             "pre_compact.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)
+        self.assertEqual(len(hooks["hooks"]["postToolUseFailure"]), 1)
+        self.assertTrue(hooks["hooks"]["postToolUseFailure"][0]["command"])
 
 
 if __name__ == "__main__":

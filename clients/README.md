@@ -29,4 +29,6 @@ Durable backup for other hosts: one org `tsk_` on the MCP headers
 **Agent protocol:** ``protocol.md`` — paste into Hermes SOUL, Claude project
 instructions, etc. SessionStart hooks may request thin-client
 `memory_session_ensure(auto_recall=true)` and inject a compact hit list;
+Cursor `postToolUseFailure` / failed `postToolUse` may
+inject compact `memory_recall` hits as `additional_context` (read-only);
 explicit `memory_recall` remains preferred for keyword work.

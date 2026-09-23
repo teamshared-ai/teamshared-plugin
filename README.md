@@ -3,9 +3,9 @@
 Registers the teamshared MCP server. The **Cursor** plugin also ships the
 recall-first memory rule and Cursor hooks that capture Agent Chat into
 TeamShared (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`,
-`stop`, `sessionEnd`) plus `postToolUse` (failed test/lint/shell) and
-`preCompact`. The Cursor plugin still has no skills, slash commands, or
-extra agents.
+`stop`, `sessionEnd`) plus `postToolUse` (failed test/lint/shell),
+`postToolUseFailure` (read-only recall), and `preCompact`. The Cursor
+plugin still has no skills, slash commands, or extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
 (remote MCP via Claude Code's native `/mcp` OAuth, `TEAMSHARED_TOKEN` for the
@@ -33,7 +33,7 @@ copy: [`AGENTS.md`](AGENTS.md).
 |---|---|
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
-| `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell) and `preCompact` |
+| `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell), `postToolUseFailure` (read-only recall), and `preCompact` |
 | `claude/` | Claude Code plugin (remote MCP via native `/mcp` OAuth + protocol 1.31.0 + capture hooks needing `TEAMSHARED_TOKEN`) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
@@ -200,9 +200,14 @@ scoped to that org, or mint under `/app/keys` — on the MCP headers
   closes and distills. `stop` only notes aborted/error loops (it fires
   after every turn, so it does not distill). `postToolUse` still appends a
   short episodic fact when a Shell test/lint/command fails (command +
-  error tail, secrets stripped). `preCompact` writes a short session
-  summary. All reuse the existing Connect session — no `tsk_` in
-  `mcp.json`. Fail-open if MCP is unreachable. Cloud agents may skip
+  error tail, secrets stripped). On Cursor `postToolUseFailure` and on
+  that failed `postToolUse`, hooks also call remote `memory_recall` with
+  a tight query (tool name + truncated error, `k=3`, `verbose=false`) and
+  inject compact hits as `additional_context` — same pattern as
+  SessionStart auto_recall. Skip when recall is empty or MCP has no token.
+  That recall path never writes (`context_commit`). Fail-open if MCP is
+  unreachable. `preCompact` writes a short session summary. All reuse the
+  existing Connect session — no `tsk_` in `mcp.json`. Cloud agents may skip
   `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
   Agents still recall first and may commit curated facts; hooks store the
   transcript.

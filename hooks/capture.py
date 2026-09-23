@@ -9,6 +9,10 @@ sessionStart also injects a capped additional_context block from the
 ensure payload (soul / playbook header / optional profile / compact
 auto_recall bullets) when useful.
 
+postToolUseFailure (and failed postToolUse) may inject compact
+memory_recall hits as additional_context. That path is read-only —
+never context_commit.
+
 Capture POSTs to the org URL from ``.teamshared/org`` (D1 resolver) and
 reuses the Cursor Connect token. Unbound / invalid → ``/mcp``. Does not
 register a second TeamShared MCP server.
@@ -56,7 +60,17 @@ MAX_SESSION_START_ANCHOR_CHARS = 400
 MAX_AUTO_RECALL_HITS = 5
 MAX_AUTO_RECALL_LINE_CHARS = 140
 MAX_AUTO_RECALL_BLOCK_CHARS = 800
+MAX_FAILURE_RECALL_QUERY_CHARS = 240
+MAX_FAILURE_RECALL_K = 3
+MAX_FAILURE_RECALL_LINE_CHARS = 140
+MAX_FAILURE_RECALL_BLOCK_CHARS = 800
 MCP_TIMEOUT_SEC = 8
+# Server MemoryKind today. bug_fix / anti_pattern are not kinds; when they
+# land in the catalog, failure_recall_filters() starts sending kind=.
+_CATALOG_RECALL_KINDS = frozenset(
+    {"fact", "preference", "event", "note", "outreach", "skill", "procedure"}
+)
+_PREFERRED_FAILURE_KINDS = ("bug_fix", "anti_pattern")
 HOOK_CACHE_ENV = "TEAMSHARED_HOOK_CACHE"
 SESSION_ENV = "TEAMSHARED_SESSION_ID"
 CONVERSATION_ENV = "TEAMSHARED_CONVERSATION_ID"
@@ -227,6 +241,52 @@ def error_tail(payload: dict[str, Any]) -> str:
         text = text[-MAX_ERROR_TAIL_CHARS:]
         text = "…" + text.lstrip()
     return text
+
+
+def is_post_tool_use_failure_event(payload: dict[str, Any] | None = None) -> bool:
+    """True when Cursor fired postToolUseFailure (timeout / error / deny)."""
+    payload = payload or {}
+    event = str(payload.get("hook_event_name") or payload.get("hookEventName") or "")
+    if event.strip().lower() == "posttoolusefailure":
+        return True
+    if payload.get("failure_type") or payload.get("error_message"):
+        return True
+    return False
+
+
+def failure_recall_query(payload: dict[str, Any] | None = None) -> str:
+    """Tight keyword query: tool name + truncated error. Empty if nothing to search."""
+    payload = payload or {}
+    name = tool_name(payload)
+    err = ""
+    raw = payload.get("error_message")
+    if isinstance(raw, str) and raw.strip():
+        err = strip_secrets(raw.strip())
+    if not err:
+        err = error_tail(payload)
+    if not err:
+        cmd = command_text(payload)
+        if cmd:
+            err = cmd
+    err = " ".join(err.split())
+    if not err:
+        return ""
+    name = name or "tool"
+    prefix = f"{name} "
+    budget = MAX_FAILURE_RECALL_QUERY_CHARS - len(prefix)
+    if budget < 16:
+        return clamp(name, MAX_FAILURE_RECALL_QUERY_CHARS)
+    if len(err) > budget:
+        err = "…" + err[-(budget - 1) :].lstrip()
+    return clamp(strip_secrets(prefix + err), MAX_FAILURE_RECALL_QUERY_CHARS)
+
+
+def failure_recall_filters() -> dict[str, Any] | None:
+    """Kind filter only when the catalog has bug_fix / anti_pattern."""
+    for kind in _PREFERRED_FAILURE_KINDS:
+        if kind in _CATALOG_RECALL_KINDS:
+            return {"kind": kind}
+    return None
 
 
 def failed_tool_fact(payload: dict[str, Any]) -> str:
@@ -888,6 +948,111 @@ def bootstrap_additional_context(ensured: dict[str, Any] | None) -> str:
         return ""
     text = "# TeamShared\n\n" + "\n\n".join(parts)
     return clamp(strip_secrets(text), MAX_BOOTSTRAP_CHARS)
+
+
+def _hit_preference(hit: dict[str, Any]) -> int:
+    """Lower rank first: bug_fix / anti_pattern, then decision-like, then other."""
+    kind = str(hit.get("kind") or "").strip().lower()
+    raw_tags = hit.get("tags")
+    tags = {str(tag).strip().lower() for tag in raw_tags} if isinstance(raw_tags, list) else set()
+    if kind in _PREFERRED_FAILURE_KINDS or tags & {"bug_fix", "anti_pattern"}:
+        return 0
+    if kind == "decision" or "decision" in tags:
+        return 1
+    if kind == "fact":
+        return 2
+    return 3
+
+
+def format_recall_hits(result: dict[str, Any] | None, *, k: int = MAX_FAILURE_RECALL_K) -> str:
+    """Compact ## Recalled bullets from memory_recall records / hits.
+
+    Same shape as SessionStart auto_recall: short lines, hard-capped block,
+    no full memory bodies. Empty when there is nothing to inject.
+    """
+    payload = _tool_payload(result)
+    hits = payload.get("records")
+    if not isinstance(hits, list):
+        hits = payload.get("hits")
+    if not isinstance(hits, list) or not hits:
+        return ""
+    ranked = [hit for hit in hits if isinstance(hit, dict)]
+    ranked.sort(key=_hit_preference)
+    lines: list[str] = []
+    for hit in ranked[:k]:
+        subject = _nonempty_text(hit.get("subject"))
+        content = _nonempty_text(hit.get("content") or hit.get("text") or hit.get("body"))
+        if content:
+            content = " ".join(content.split())
+        if subject and content:
+            line = f"- {subject}: {content}"
+        elif subject:
+            line = f"- {subject}"
+        elif content:
+            line = f"- {content}"
+        else:
+            continue
+        lines.append(clamp(line, MAX_FAILURE_RECALL_LINE_CHARS))
+    if not lines:
+        return ""
+    return clamp(strip_secrets("## Recalled\n" + "\n".join(lines)), MAX_FAILURE_RECALL_BLOCK_CHARS)
+
+
+def recall_failure_context(
+    payload: dict[str, Any] | None = None,
+    *,
+    token: str | None = None,
+) -> str:
+    """Read-only memory_recall for a failed tool. Never writes.
+
+    Skip when the query is empty, the user interrupted, MCP has no token
+    (unbound / no Connect), or recall returns nothing.
+    """
+    payload = payload or {}
+    if payload.get("is_interrupt") is True:
+        return ""
+    query = failure_recall_query(payload)
+    if not query:
+        return ""
+    token = token if token is not None else resolve_token()
+    if not token:
+        return ""
+    repo, github, _cid = _scope_args(payload)
+    args: dict[str, Any] = {
+        "query": query,
+        "k": MAX_FAILURE_RECALL_K,
+        "verbose": False,
+    }
+    if repo:
+        args["repo"] = repo
+    if github:
+        args["github"] = github
+    filters = failure_recall_filters()
+    if filters:
+        args["filters"] = filters
+    result = mcp_call("memory_recall", args, token, url=resolve_mcp_url(payload))
+    if not result:
+        return ""
+    return format_recall_hits(result)
+
+
+def handle_post_tool_use_failure(payload: dict[str, Any]) -> dict[str, Any]:
+    """Inject compact recall hits. Read-only — no context_commit."""
+    extra: dict[str, Any] = {}
+    try:
+        context = recall_failure_context(payload)
+    except Exception:
+        context = ""
+    if context:
+        extra["additional_context"] = context
+    return extra
+
+
+def handle_failed_post_tool_use_recall(payload: dict[str, Any]) -> dict[str, Any]:
+    """Same injection as postToolUseFailure, gated to failed Shell postToolUse."""
+    if not is_failed_test_lint_shell(payload):
+        return {}
+    return handle_post_tool_use_failure(payload)
 
 
 def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | None]:

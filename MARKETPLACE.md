@@ -5,8 +5,9 @@ How to install **teamshared** from this repo, and how to submit to the
 
 The **Cursor** plugin is **MCP + the recall rule + Cursor hooks** that
 capture Agent Chat (`sessionStart`, `beforeSubmitPrompt`,
-`afterAgentResponse`, `stop`, `sessionEnd`) plus `postToolUse` and
-`preCompact`. Still no skills, agents, or commands.
+`afterAgentResponse`, `stop`, `sessionEnd`) plus `postToolUse`,
+`postToolUseFailure` (read-only recall), and `preCompact`. Still no
+skills, agents, or commands.
 
 Claude Code installs from the same GitHub URL via
 `.claude-plugin/marketplace.json` (separate first-class package under
@@ -84,7 +85,7 @@ Cursor reviews all marketplace plugins manually. Checklist before submitting at
 - [ ] `.cursor-plugin/marketplace.json` lists `teamshared` with `"source": "./"`
 - [ ] `.cursor-plugin/plugin.json` is valid JSON with kebab-case `name`, `version`, `description`, `author`, `license`, `logo`, `mcpServers`
 - [ ] `mcp.json` registers `https://teamshared.com/mcp` with no `headers`
-- [ ] Plugin ships `rules/teamshared.mdc` and Cursor hooks in `hooks/` (chat capture + `postToolUse` + `preCompact`; no `skills/`, `agents/`, or `commands/`)
+- [ ] Plugin ships `rules/teamshared.mdc` and Cursor hooks in `hooks/` (chat capture + `postToolUse` + `postToolUseFailure` + `preCompact`; no `skills/`, `agents/`, or `commands/`)
 - [ ] `README.md` covers install, MCP config, and what the plugin does
 - [ ] `LICENSE` and `CHANGELOG.md` present
 - [ ] Logo committed at `assets/logo.png` (512×512 brand mark) and `assets/logo.svg`; both Cursor `plugin.json` and `marketplace.json` reference `assets/logo.png` (relative path, not a remote URL)
@@ -117,9 +118,9 @@ Do not add a `tsk_` key or `mcp_auth` steps.
 ```
 TeamShared registers the hosted TeamShared MCP (https://teamshared.com/mcp)
 and ships the recall-first memory rule plus Cursor hooks that capture
-Agent Chat in near-real-time, plus postToolUse (failed test/lint/shell)
-and preCompact (short session summary). Still no skills, slash commands,
-or extra agents.
+Agent Chat in near-real-time, plus postToolUse (failed test/lint/shell),
+postToolUseFailure (read-only recall of prior fixes), and preCompact
+(short session summary). Still no skills, slash commands, or extra agents.
 
 After install, connect with email and a one-time code under Settings →
 Tools & MCP → teamshared → Connect (same as the web console). Cloud and
@@ -180,7 +181,7 @@ teamshared-plugin/
 ├── .mcp.json              # Open Plugins MCP config (streamable-http)
 ├── mcp.json               # Cursor-native HTTP MCP (OAuth Connect, no headers)
 ├── rules/teamshared.mdc
-├── hooks/                 # Agent Chat capture + postToolUse + preCompact (Cursor)
+├── hooks/                 # Agent Chat capture + postToolUse + postToolUseFailure + preCompact (Cursor)
 ├── clients/               # protocol + manual MCP examples for other harnesses
 ├── .agents/plugins/
 │   └── marketplace.json   # Codex catalog: source ./plugins/teamshared
