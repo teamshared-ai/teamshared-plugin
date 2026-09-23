@@ -53,6 +53,7 @@ check "$ROOT/CHANGELOG.md"
 check "$ROOT/hooks/hooks.json"
 check "$ROOT/hooks/capture.py"
 check "$ROOT/hooks/post_tool_use.py"
+check "$ROOT/hooks/post_tool_use_failure.py"
 check "$ROOT/hooks/pre_compact.py"
 check "$ROOT/hooks/session_start.py"
 check "$ROOT/hooks/before_submit_prompt.py"
@@ -300,6 +301,7 @@ required = {
     "stop",
     "sessionEnd",
     "postToolUse",
+    "postToolUseFailure",
     "preCompact",
 }
 if set(events) != required:
@@ -316,7 +318,7 @@ if matcher != "Shell":
 if "tsk_" in json.dumps(hooks):
     print("FAIL  hooks.json must not contain a tsk_ key")
     sys.exit(1)
-print("ok  hooks  chat capture + postToolUse + preCompact")
+print("ok  hooks  chat capture + postToolUse + postToolUseFailure + preCompact")
 
 with open(claude_market_path) as f:
     claude_market = json.load(f)
@@ -913,6 +915,7 @@ for needle in (
     "afterAgentResponse",
     "sessionEnd",
     "postToolUse",
+    "postToolUseFailure",
     "preCompact",
     "org_list",
     "org_bind",

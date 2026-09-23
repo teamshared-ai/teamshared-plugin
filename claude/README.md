@@ -98,7 +98,7 @@ This package does **not** invent Cursor-only names.
 
 | Event | What it does |
 |---|---|
-| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Claude `session_id` → `memory_session_ensure` |
+| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Claude `session_id` → `memory_session_ensure(auto_recall=true)` and may fold a compact hit list. Explicit `memory_recall` remains preferred for keyword work |
 | `UserPromptSubmit` | Appends the redacted user prompt (`ensure(user=)`) |
 | `Stop` | Appends the redacted assistant text (`last_assistant_message`). Does **not** distill — Stop fires every turn |
 | `StopFailure` | Notes API-error turns; does not close the session |

@@ -119,7 +119,7 @@ This package does **not** invent Cursor camelCase names or Claude-only events.
 
 | Event | What it does |
 |---|---|
-| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Codex `session_id` → `memory_session_ensure` |
+| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Codex `session_id` → `memory_session_ensure(auto_recall=true)` and may fold a compact hit list. Explicit `memory_recall` remains preferred for keyword work |
 | `UserPromptSubmit` | Appends the redacted user prompt (`ensure(user=)`) |
 | `Stop` | Appends the redacted assistant text (`last_assistant_message`). Does **not** distill — Stop fires every turn |
 | `SessionEnd` | `memory_session_close` + distill (timeout capped at Codex's 3s maximum) |

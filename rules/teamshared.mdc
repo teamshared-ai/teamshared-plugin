@@ -97,7 +97,9 @@ working memory (Connect token only, fail-open): `sessionStart` maps
 `afterAgentResponse` append redacted user/assistant turns; `stop` notes
 abort/error only (does not distill every turn); `sessionEnd` closes and
 distills. `postToolUse` still writes a short episodic fact when a Shell
-test/lint/command fails; `preCompact` writes a short session summary. Hooks
+test/lint/command fails; `postToolUseFailure` (and that failed `postToolUse`)
+may inject compact `memory_recall` hits as `additional_context` (read-only,
+never `context_commit`); `preCompact` writes a short session summary. Hooks
 store the transcript; you still recall first and may `context_commit` curated
 facts. Do not re-append the same user/assistant text in the same turn. Cloud
 agents may skip `sessionStart` / `sessionEnd` — later hooks still ensure + append.
