@@ -1,5 +1,19 @@
 # Example Hermes MCP block (manual setup)
 #
+# TeamShared on Hermes uses a seat bearer — not browser OAuth.
+# Mint an org seat key (`teamshared token mint <agent>` or
+# https://teamshared.com/app/keys) and put it in headers:
+#   Authorization: Bearer tsk_…
+# Never commit a live tsk_ value.
+#
+# Do not use Hermes "Sign in to MCP" / OAuth for TeamShared on hosted
+# Railway (or any non-loopback callback). TeamShared DCR allowlists only
+# known hosted callbacks (Cursor, Claude, ChatGPT, Grok, Smithery) plus
+# RFC 8252 loopback. A public Railway callback is rejected:
+#   400 invalid_client_metadata — redirect_uri not allowed:
+#   http://*.up.railway.app/api/mcp/oauth/callback/teamshared
+# If you see that, mint a seat key and put it in headers instead.
+#
 # For curl install, use the templated snippet the server serves at
 # /install/assets/hermes/mcp.yaml (source: ../install/hermes/mcp.yaml).
 # Paste protocol.md into SOUL — same as /install/assets/hermes/protocol.md
@@ -9,7 +23,7 @@ mcp_servers:
   teamshared:
     url: https://teamshared.com/mcp
     headers:
-      Authorization: "Bearer <agent-token>"
+      Authorization: "Bearer tsk_…"
     timeout: 30
     connect_timeout: 10
     tools:

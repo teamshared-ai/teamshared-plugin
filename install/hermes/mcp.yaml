@@ -1,4 +1,14 @@
 # teamshared — merge under mcp_servers: in ./.hermes/config.yaml (project-local)
+#
+# Auth is Authorization: Bearer tsk_… (org seat key). Mint with
+# `teamshared token mint <agent>` or at https://teamshared.com/app/keys.
+# Never commit a live tsk_ value.
+#
+# Do not use Hermes "Sign in to MCP" / OAuth for TeamShared on hosted
+# Railway (or any non-loopback callback). TeamShared DCR only allowlists
+# known hosted callbacks + localhost. A *.up.railway.app redirect_uri
+# is rejected (400 invalid_client_metadata / redirect_uri not allowed).
+# If you see that error, mint an org seat key and put it in headers.
   teamshared:
     url: __MCP_URL__
     headers:

@@ -14,10 +14,22 @@ See [`../AGENTS.md`](../AGENTS.md).
 Durable backup for other hosts: one org `tsk_` on the MCP headers
 (`Authorization: Bearer tsk_…`).
 
+**Hermes** leads with that bearer. Mint an org seat key
+(`teamshared token mint <agent>` or
+[teamshared.com/app/keys](https://teamshared.com/app/keys)) and put
+`Authorization: Bearer tsk_…` on the MCP headers (see
+``hermes.config.yaml``). Do **not** use Hermes “Sign in to MCP” / OAuth
+for TeamShared on hosted Railway or any non-loopback callback.
+
+**Troubleshooting:** `redirect_uri not allowed` /
+`invalid_client_metadata` with a `*.up.railway.app` (or any
+non-allowlisted host) callback means TeamShared DCR rejected the hosted
+HTTP redirect. Mint an org seat key and put it in headers instead.
+
 | Harness | Reference |
 |---|---|
 | Cursor | ``protocol.md`` + plugin rule ``../rules/teamshared.mdc`` |
-| Hermes | ``hermes.config.yaml`` (example URLs) |
+| Hermes | ``hermes.config.yaml`` — bearer `tsk_`, not “Sign in to MCP” |
 | Claude Code | Marketplace plugin ``../claude/`` (`/plugin install teamshared@teamshared`) |
 | Claude Desktop | ``claude-desktop.json`` (remote + local stdio) |
 | Codex | [``../install/codex/README.md``](../install/codex/README.md) — ``codex mcp add`` or merge [``mcp.toml``](../install/codex/mcp.toml) into ``.codex/config.toml`` |

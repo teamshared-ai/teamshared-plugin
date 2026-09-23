@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Hermes on Railway uses `tsk_` bearer (#52):** Hermes setup docs
+  (`clients/hermes.config.yaml`, `install/hermes/mcp.yaml`,
+  `clients/README.md`, `clients/protocol.md`) lead with
+  `Authorization: Bearer tsk_…` (`teamshared token mint` or `/app/keys`).
+  Do not use Hermes “Sign in to MCP” / OAuth on hosted Railway or any
+  non-loopback callback. `redirect_uri not allowed` /
+  `*.up.railway.app` means mint a seat key and put it in headers.
 - **SessionStart auto_recall (#50):** Cursor / Claude / Codex SessionStart
   ensure calls pass `auto_recall=true` plus a short `user=` / `topic=`
   when the harness provides conversation or title text. Compact

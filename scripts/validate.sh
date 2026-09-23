@@ -782,6 +782,28 @@ else
   echo "ok  docs  clients/README Codex link"
 fi
 
+if ! grep -q "Authorization: Bearer tsk_" "$ROOT/clients/hermes.config.yaml" \
+  || ! grep -q "Sign in to MCP" "$ROOT/clients/hermes.config.yaml" \
+  || ! grep -q "redirect_uri not allowed" "$ROOT/clients/hermes.config.yaml" \
+  || ! grep -q "teamshared token mint" "$ROOT/clients/hermes.config.yaml" \
+  || ! grep -q "Authorization: Bearer tsk_" "$ROOT/install/hermes/mcp.yaml" \
+  || ! grep -q "Sign in to MCP" "$ROOT/install/hermes/mcp.yaml" \
+  || ! grep -q "redirect_uri not allowed" "$ROOT/install/hermes/mcp.yaml" \
+  || ! grep -q "teamshared token mint" "$ROOT/install/hermes/mcp.yaml" \
+  || ! grep -q "Sign in to MCP" "$ROOT/clients/README.md" \
+  || ! grep -q "redirect_uri not allowed" "$ROOT/clients/README.md" \
+  || ! grep -Fq "*.up.railway.app" "$ROOT/clients/README.md" \
+  || ! grep -q "teamshared token mint" "$ROOT/clients/README.md" \
+  || ! grep -q "Authorization: Bearer tsk_" "$ROOT/clients/protocol.md" \
+  || ! grep -q "Sign in to MCP" "$ROOT/clients/protocol.md" \
+  || ! grep -q "redirect_uri not allowed" "$ROOT/clients/protocol.md" \
+  || ! grep -q "teamshared token mint" "$ROOT/clients/protocol.md"; then
+  echo "FAIL  Hermes docs must lead with bearer tsk_, ban Sign in to MCP / OAuth on hosted Railway, and name redirect_uri not allowed + token mint"
+  FAIL=1
+else
+  echo "ok  docs  Hermes bearer tsk_ (not hosted OAuth)"
+fi
+
 if command -v python3 >/dev/null 2>&1; then
   python3 - <<'PY' "$ROOT/install/codex/mcp.toml" "$ROOT/install/codex/README.md"
 import re, sys

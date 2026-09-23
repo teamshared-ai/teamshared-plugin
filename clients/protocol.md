@@ -14,8 +14,14 @@ Paste this block into the host's system prompt, project instructions, or
 `CLAUDE.md`. MCP wiring alone does not make the model call memory tools reliably.
 
 For **Hermes**, paste this section into `~/.hermes/SOUL.md` (loaded every message).
-Hermes also has a local `memory` tool and MEMORY.md — those are not teamshared;
-see the MEMORY.md vs teamshared table below.
+Wire MCP with `Authorization: Bearer tsk_…` — mint via
+`teamshared token mint <agent>` or https://teamshared.com/app/keys.
+Do **not** use Hermes “Sign in to MCP” / OAuth for TeamShared on hosted
+Railway or any non-loopback callback. If DCR returns
+`redirect_uri not allowed` (for example `*.up.railway.app`), mint a seat
+key and put it in headers instead. Hermes also has a local `memory` tool
+and MEMORY.md — those are not teamshared; see the MEMORY.md vs
+teamshared table below.
 
 ---
 
