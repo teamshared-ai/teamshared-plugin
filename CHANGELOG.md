@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **SessionStart auto_recall (#50):** Cursor / Claude / Codex SessionStart
+  ensure calls pass `auto_recall=true` plus a short `user=` / `topic=`
+  when the harness provides conversation or title text. Compact
+  `auto_recall.records` bullets fold into `additional_context` /
+  `additionalContext` (tight cap, no full memory bodies). Old servers
+  that ignore the flag stay fail-open. Explicit `memory_recall` remains
+  preferred for keyword work. Server:
+  [teamshared#720](https://github.com/teamshared-ai/teamshared/pull/720).
 - **Cursor postToolUseFailure recall (#54):** on `postToolUseFailure` and
   failed `postToolUse`, call remote `memory_recall` with a tight query
   (tool name + truncated error, `k=3`, `verbose=false`). Prefer

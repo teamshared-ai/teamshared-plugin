@@ -59,6 +59,9 @@ user's query. Use the returned hits to ground your answer and cite them.
   recall to softly boost scoped memories (nothing is hidden).
 
 If recall returns nothing relevant, say so before answering from priors.
+SessionStart hooks may request thin-client `memory_session_ensure(auto_recall=true)`
+and inject a compact hit list; explicit `memory_recall` remains preferred for
+keyword work.
 
 Cursor `postToolUseFailure` (and failed `postToolUse`) hooks may call
 `memory_recall` with a tight tool-name + error query (`k=3`, short token
