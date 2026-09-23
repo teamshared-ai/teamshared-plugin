@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Cursor postToolUseFailure recall (#54):** on `postToolUseFailure` and
+  failed `postToolUse`, call remote `memory_recall` with a tight query
+  (tool name + truncated error, `k=3`, `verbose=false`). Prefer
+  `bug_fix` / `anti_pattern` / decision-like hits when those kinds exist;
+  otherwise semantic recall. Inject compact `## Recalled` bullets as
+  `additional_context` (same pattern as SessionStart auto_recall). Skip
+  when empty or MCP has no token. Never `context_commit` on this path —
+  the existing failed-Shell ingest still writes separately.
 - **MCP org bind (protocol 1.31.0):** lockstep with server
   [teamshared#542](https://github.com/teamshared-ai/teamshared/pull/542)
   (Fixes #541). `rules/teamshared.mdc` matches the server client mdc.
