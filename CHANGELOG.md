@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Hermes on Railway uses `tsk_` bearer (#52):** Hermes setup docs
+  (`clients/hermes.config.yaml`, `install/hermes/mcp.yaml`,
+  `clients/README.md`, `clients/protocol.md`) lead with
+  `Authorization: Bearer tsk_…` (`teamshared token mint` or `/app/keys`).
+  Do not use Hermes “Sign in to MCP” / OAuth on hosted Railway or any
+  non-loopback callback. `redirect_uri not allowed` /
+  `*.up.railway.app` means mint a seat key and put it in headers.
 - **MCP org bind (protocol 1.31.0):** lockstep with server
   [teamshared#542](https://github.com/teamshared-ai/teamshared/pull/542)
   (Fixes #541). `rules/teamshared.mdc` matches the server client mdc.
