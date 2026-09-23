@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **SessionStart auto_recall (#50):** Cursor / Claude / Codex SessionStart
+  ensure calls pass `auto_recall=true` plus a short `user=` / `topic=`
+  when the harness provides conversation or title text. Compact
+  `auto_recall.records` bullets fold into `additional_context` /
+  `additionalContext` (tight cap, no full memory bodies). Old servers
+  that ignore the flag stay fail-open. Explicit `memory_recall` remains
+  preferred for keyword work. Server:
+  [teamshared#720](https://github.com/teamshared-ai/teamshared/pull/720).
 - **MCP org bind (protocol 1.31.0):** lockstep with server
   [teamshared#542](https://github.com/teamshared-ai/teamshared/pull/542)
   (Fixes #541). `rules/teamshared.mdc` matches the server client mdc.

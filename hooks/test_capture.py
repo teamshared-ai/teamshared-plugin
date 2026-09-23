@@ -247,6 +247,7 @@ class TurnCaptureTests(unittest.TestCase):
         self.assertNotIn("tsk_abcDEF12345678", calls[0][1]["user"])
         self.assertFalse(calls[0][1]["fresh"])
         self.assertEqual(calls[0][1]["topic"], "cursor:conv-9")
+        self.assertNotIn("auto_recall", calls[0][1])
 
     def test_after_agent_response_appends_assistant(self) -> None:
         calls: list[tuple[str, dict]] = []
@@ -295,6 +296,8 @@ class TurnCaptureTests(unittest.TestCase):
         self.assertEqual(extra["env"][capture.CONVERSATION_ENV], "conv-new")
         self.assertNotIn("additional_context", extra)
         self.assertTrue(calls[0][1]["fresh"])
+        self.assertTrue(calls[0][1]["auto_recall"])
+        self.assertNotIn("user", calls[0][1])
 
     def test_stop_completed_does_not_close(self) -> None:
         calls: list[tuple[str, dict]] = []
@@ -578,6 +581,99 @@ class SessionStartContextTests(unittest.TestCase):
         self.assertTrue(ctx)
         self.assertLessEqual(len(ctx), capture.MAX_BOOTSTRAP_CHARS)
         self.assertTrue(ctx.endswith("…"))
+
+    def test_session_start_passes_title_and_prompt_anchors(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            calls.append((name, arguments))
+            return {"session_id": "ts-anchor"}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        capture.handle_session_start(
+                            {
+                                "session_id": "conv-anchor",
+                                "title": "Fix ranking",
+                                "prompt": "why is RRF wrong in recall",
+                                "cwd": str(Path.cwd()),
+                            }
+                        )
+        self.assertTrue(calls[0][1]["auto_recall"])
+        self.assertEqual(calls[0][1]["topic"], "Fix ranking")
+        self.assertIn("why is RRF wrong", calls[0][1]["user"])
+
+    def test_auto_recall_records_folded_into_additional_context(self) -> None:
+        body = "ranking uses RRF then repo boost. " + ("x" * 4000)
+        calls: list[tuple[str, dict]] = []
+
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL):
+            calls.append((name, arguments))
+            return {
+                "session_id": "ts-recall",
+                "soul": "",
+                "auto_recall": {
+                    "skipped": False,
+                    "records": [
+                        {"subject": "retrieval", "content": body},
+                        {"subject": "caps", "content": "k=5 on the server"},
+                    ],
+                },
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                with patch.object(capture, "mcp_call", side_effect=fake_call):
+                    with patch.object(capture, "resolve_token", return_value="oauth-from-connect"):
+                        extra = capture.handle_session_start(
+                            {
+                                "conversation_id": "conv-recall",
+                                "title": "retrieval",
+                                "cwd": str(Path.cwd()),
+                            }
+                        )
+        ctx = extra["additional_context"]
+        self.assertTrue(calls[0][1]["auto_recall"])
+        self.assertEqual(calls[0][1]["topic"], "retrieval")
+        self.assertIn("## Recalled", ctx)
+        self.assertIn("retrieval", ctx)
+        self.assertIn("RRF", ctx)
+        self.assertIn("k=5", ctx)
+        self.assertNotIn("x" * 500, ctx)
+        self.assertLessEqual(len(ctx), capture.MAX_BOOTSTRAP_CHARS)
+
+    def test_auto_recall_hits_key_and_skipped(self) -> None:
+        self.assertIn(
+            "compact hit",
+            capture.format_auto_recall_hits(
+                {"auto_recall": {"hits": [{"content": "compact hit"}]}}
+            ),
+        )
+        self.assertEqual(
+            capture.format_auto_recall_hits(
+                {"auto_recall": {"skipped": True, "records": [{"content": "nope"}]}}
+            ),
+            "",
+        )
+        self.assertEqual(capture.format_auto_recall_hits({"session_id": "old"}), "")
+        self.assertEqual(
+            capture.bootstrap_additional_context(
+                {
+                    "session_id": "ts-empty",
+                    "soul": "",
+                    "auto_recall": {
+                        "skipped": True,
+                        "reason": "missing_query",
+                        "records": [],
+                    },
+                }
+            ),
+            "",
+        )
 
 
 def _git_repo(body: str | None) -> tuple[tempfile.TemporaryDirectory, Path]:

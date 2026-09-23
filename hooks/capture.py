@@ -6,7 +6,8 @@ context_commit + memory_session_close) using the existing Cursor Connect
 token when we can find it — not a tsk_ in mcp.json.
 
 sessionStart also injects a capped additional_context block from the
-ensure payload (soul / playbook header / optional profile) when useful.
+ensure payload (soul / playbook header / optional profile / compact
+auto_recall bullets) when useful.
 
 Capture POSTs to the org URL from ``.teamshared/org`` (D1 resolver) and
 reuses the Cursor Connect token. Unbound / invalid → ``/mcp``. Does not
@@ -51,6 +52,10 @@ MAX_TOPIC_CHARS = 200
 MAX_BOOTSTRAP_CHARS = 3500
 MAX_PLAYBOOK_HEADER_CHARS = 1200
 MAX_PROFILE_CHARS = 800
+MAX_SESSION_START_ANCHOR_CHARS = 400
+MAX_AUTO_RECALL_HITS = 5
+MAX_AUTO_RECALL_LINE_CHARS = 140
+MAX_AUTO_RECALL_BLOCK_CHARS = 800
 MCP_TIMEOUT_SEC = 8
 HOOK_CACHE_ENV = "TEAMSHARED_HOOK_CACHE"
 SESSION_ENV = "TEAMSHARED_SESSION_ID"
@@ -538,6 +543,34 @@ def user_prompt_text(payload: dict[str, Any]) -> str:
     return clamp(text, MAX_TURN_CHARS)
 
 
+def session_start_title(payload: dict[str, Any] | None) -> str:
+    """Conversation/title text from a SessionStart payload, if the harness sent one."""
+    payload = payload or {}
+    for key in ("title", "conversation_title", "session_title", "thread_title"):
+        val = payload.get(key)
+        if isinstance(val, str) and val.strip():
+            return clamp(strip_secrets(val.strip()), MAX_TOPIC_CHARS)
+    conversation = payload.get("conversation")
+    if isinstance(conversation, dict):
+        for key in ("title", "name"):
+            val = conversation.get(key)
+            if isinstance(val, str) and val.strip():
+                return clamp(strip_secrets(val.strip()), MAX_TOPIC_CHARS)
+    return ""
+
+
+def session_start_user(payload: dict[str, Any] | None) -> str:
+    """Short user/title anchor for SessionStart auto_recall. Empty if none."""
+    payload = payload or {}
+    prompt = user_prompt_text(payload)
+    if prompt:
+        return clamp(prompt, MAX_SESSION_START_ANCHOR_CHARS)
+    title = session_start_title(payload)
+    if title:
+        return clamp(title, MAX_SESSION_START_ANCHOR_CHARS)
+    return ""
+
+
 def assistant_response_text(payload: dict[str, Any]) -> str:
     for key in ("text", "response", "assistant_text", "message"):
         val = payload.get(key)
@@ -789,12 +822,53 @@ def _profile_text(profile: Any) -> str:
     return ""
 
 
+def format_auto_recall_hits(ensured: dict[str, Any] | None) -> str:
+    """Compact bullet list from ensure ``auto_recall.records`` (#720) or ``hits``.
+
+    Never dumps full memory bodies, skill libraries, or transcripts.
+    Empty when skipped, missing, or the server ignored the flag.
+    """
+    payload = _tool_payload(ensured)
+    block = payload.get("auto_recall")
+    if not isinstance(block, dict) or block.get("skipped"):
+        return ""
+    hits = block.get("records")
+    if not isinstance(hits, list):
+        hits = block.get("hits")
+    if not isinstance(hits, list) or not hits:
+        return ""
+    lines: list[str] = []
+    for hit in hits[:MAX_AUTO_RECALL_HITS]:
+        if not isinstance(hit, dict):
+            continue
+        subject = _nonempty_text(hit.get("subject"))
+        content = _nonempty_text(
+            hit.get("content") or hit.get("text") or hit.get("body")
+        )
+        if content:
+            content = " ".join(content.split())
+        if subject and content:
+            line = f"- {subject}: {content}"
+        elif subject:
+            line = f"- {subject}"
+        elif content:
+            line = f"- {content}"
+        else:
+            continue
+        lines.append(clamp(line, MAX_AUTO_RECALL_LINE_CHARS))
+    if not lines:
+        return ""
+    return clamp(
+        strip_secrets("## Recalled\n" + "\n".join(lines)), MAX_AUTO_RECALL_BLOCK_CHARS
+    )
+
+
 def bootstrap_additional_context(ensured: dict[str, Any] | None) -> str:
-    """Compact soul / playbook / optional profile for Cursor additional_context.
+    """Compact soul / playbook / optional profile / auto_recall for Cursor.
 
     Uses only fields already on a successful memory_session_ensure payload.
-    Never dumps recall catalogs, skill libraries, or session transcripts.
-    Empty when there is nothing useful to inject.
+    Compact auto_recall bullets only — never full memory bodies, skill
+    libraries, or session transcripts. Empty when there is nothing useful.
     """
     payload = _tool_payload(ensured)
     parts: list[str] = []
@@ -807,6 +881,9 @@ def bootstrap_additional_context(ensured: dict[str, Any] | None) -> str:
     profile = _profile_text(payload.get("profile") or payload.get("bootstrap"))
     if profile:
         parts.append(f"## Profile\n{clamp(profile, MAX_PROFILE_CHARS)}")
+    recalled = format_auto_recall_hits(payload)
+    if recalled:
+        parts.append(recalled)
     if not parts:
         return ""
     text = "# TeamShared\n\n" + "\n\n".join(parts)
@@ -824,6 +901,8 @@ def ensure_session_payload(
     *,
     fresh: bool = False,
     user: str | None = None,
+    topic: str | None = None,
+    auto_recall: bool = False,
     token: str | None = None,
 ) -> dict[str, Any] | None:
     """Call memory_session_ensure and persist the conversation→session map."""
@@ -837,13 +916,15 @@ def ensure_session_payload(
         fresh = False
     ensure_args: dict[str, Any] = {
         "repo": repo,
-        "topic": session_topic(cid),
+        "topic": topic or session_topic(cid),
         "fresh": fresh,
     }
     if github:
         ensure_args["github"] = github
     if user:
         ensure_args["user"] = clamp(strip_secrets(user), MAX_TURN_CHARS)
+    if auto_recall:
+        ensure_args["auto_recall"] = True
     ensured = mcp_call(
         "memory_session_ensure", ensure_args, token, url=resolve_mcp_url(payload)
     )
@@ -985,7 +1066,15 @@ def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
         env[CONVERSATION_ENV] = cid
     ensured: dict[str, Any] | None = None
     try:
-        ensured = ensure_session_payload(payload, fresh=True)
+        title = session_start_title(payload) or None
+        user = session_start_user(payload) or None
+        ensured = ensure_session_payload(
+            payload,
+            fresh=True,
+            user=user,
+            topic=title,
+            auto_recall=True,
+        )
     except Exception:
         ensured = None
     session_id = _session_id_from_result(ensured)
