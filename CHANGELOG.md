@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Rule "Staying current" (teamshared#913):** on `update_available: true`,
+  tell the user to update this plugin. Never write a local
+  `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin
+  clients use `rule_markdown`. Same bytes as the server client mdc; the
+  protocol stays 1.31.0.
 - **Hermes on Railway uses `tsk_` bearer (#52):** Hermes setup docs
   (`clients/hermes.config.yaml`, `install/hermes/mcp.yaml`,
   `clients/README.md`, `clients/protocol.md`) lead with
