@@ -29,10 +29,9 @@ discovery path (that hides files and projects).
 
 On the **first turn of a chat** (or when the user asks about teamshared
 versions), call `version` with this rule's frontmatter `version` (`1.31.0`) as
-`installed_rule_version`. Do not call `version` every turn. If
-`update_available: true`, write the returned `rule_markdown` verbatim to
-`~/.cursor/rules/teamshared.mdc` (or `.cursor/rules/teamshared.mdc` in a repo)
-and tell the user the memory rule was updated. Never invent a version.
+`installed_rule_version`, not every turn. If `update_available: true`, tell the
+user to update the teamshared plugin (never write a local `.cursor/rules/` copy;
+non-plugin clients use `rule_markdown`). Never invent a version.
 
 ## Every turn
 
