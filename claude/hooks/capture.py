@@ -879,6 +879,16 @@ def _session_start_fresh(payload: dict[str, Any]) -> bool:
     return source in {"startup", "clear", "fork"}
 
 
+def fetch_constraints_text(payload: dict[str, Any] | None = None) -> str:
+    """Verbatim standing constraints from MCP prompts/get (fail-open)."""
+    try:
+        import constraints_attach as _constraints_attach
+
+        return _constraints_attach.fetch_constraints_text(payload or {}) or ""
+    except Exception:
+        return ""
+
+
 def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
     source = str(payload.get("source") or "startup").strip().lower()
     if source == "clear":
@@ -903,6 +913,17 @@ def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
         recalled = ""
     if recalled:
         context = f"{PROTOCOL_CONTEXT.rstrip()}\n\n{recalled}"
+    try:
+        constraints = fetch_constraints_text(payload)
+    except Exception:
+        constraints = ""
+    if constraints:
+        try:
+            import constraints_attach as _constraints_attach
+
+            context = _constraints_attach.append_constraints(context, constraints)
+        except Exception:
+            context = f"{context.rstrip()}\n\n{constraints}"
     return {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",

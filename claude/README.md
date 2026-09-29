@@ -98,13 +98,13 @@ This package does **not** invent Cursor-only names.
 
 | Event | What it does |
 |---|---|
-| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Claude `session_id` → `memory_session_ensure(auto_recall=true)` and may fold a compact hit list. Explicit `memory_recall` remains preferred for keyword work |
+| `SessionStart` | Injects protocol 1.31.0 via `additionalContext`; maps Claude `session_id` → `memory_session_ensure(auto_recall=true)` and may fold a compact hit list; appends verbatim MCP `constraints` when non-empty (also on `source=compact`). Explicit `memory_recall` remains preferred for keyword work |
 | `UserPromptSubmit` | Appends the redacted user prompt (`ensure(user=)`) |
 | `Stop` | Appends the redacted assistant text (`last_assistant_message`). Does **not** distill — Stop fires every turn |
 | `StopFailure` | Notes API-error turns; does not close the session |
 | `SessionEnd` | `memory_session_close` + distill |
 | `PostToolUseFailure` | Failed `Bash` / `PowerShell` → short episodic fact (command + error tail) |
-| `PreCompact` | Short session summary before compact |
+| `PreCompact` | Short session summary before compact; re-attaches `constraints` via `systemMessage` (HSO `additionalContext` is not valid on this event) |
 
 Hook auth is `TEAMSHARED_TOKEN` only — separate from the OAuth-authenticated
 MCP connection above. Secrets are scrubbed. Every handler is fail-open (unset
