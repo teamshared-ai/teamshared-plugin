@@ -25,6 +25,7 @@ REQUIRED_HOOKS = {
     "StopFailure",
     "SessionEnd",
     "PostToolUseFailure",
+    "PreToolUse",
     "PreCompact",
 }
 
@@ -484,6 +485,7 @@ class HooksManifestTests(unittest.TestCase):
         self.assertEqual(events, REQUIRED_HOOKS)
         matcher = hooks["hooks"]["PostToolUseFailure"][0]["matcher"]
         self.assertEqual(matcher, "Bash|PowerShell")
+        self.assertEqual(hooks["hooks"]["PreToolUse"][0]["matcher"], "Read|ReadFile")
         self.assertNotIn("tsk_", json.dumps(hooks))
         for name in REQUIRED_HOOKS:
             handler = hooks["hooks"][name][0]["hooks"][0]
@@ -498,6 +500,7 @@ class HooksManifestTests(unittest.TestCase):
             "stop_failure.py",
             "session_end.py",
             "post_tool_use_failure.py",
+            "pre_read_memory.py",
             "pre_compact.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)

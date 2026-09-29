@@ -54,6 +54,8 @@ check "$ROOT/hooks/hooks.json"
 check "$ROOT/hooks/capture.py"
 check "$ROOT/hooks/post_tool_use.py"
 check "$ROOT/hooks/post_tool_use_failure.py"
+check "$ROOT/hooks/pre_read_memory.py"
+check "$ROOT/hooks/test_pre_read_memory.py"
 check "$ROOT/hooks/pre_compact.py"
 check "$ROOT/hooks/session_start.py"
 check "$ROOT/hooks/before_submit_prompt.py"
@@ -75,6 +77,7 @@ check "$ROOT/claude/hooks/stop_failure.py"
 check "$ROOT/claude/hooks/session_end.py"
 check "$ROOT/claude/hooks/post_tool_use_failure.py"
 check "$ROOT/claude/hooks/pre_compact.py"
+check "$ROOT/claude/hooks/pre_read_memory.py"
 check "$ROOT/claude/hooks/test_capture.py"
 check "$ROOT/.agents/plugins/marketplace.json"
 check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
@@ -302,6 +305,7 @@ required = {
     "sessionEnd",
     "postToolUse",
     "postToolUseFailure",
+    "preToolUse",
     "preCompact",
 }
 if set(events) != required:
@@ -315,10 +319,17 @@ matcher = events["postToolUse"][0].get("matcher")
 if matcher != "Shell":
     print(f"FAIL  postToolUse matcher must be Shell, got {matcher!r}")
     sys.exit(1)
+pre_read = events["preToolUse"][0].get("matcher")
+if pre_read != "Read":
+    print(f"FAIL  preToolUse matcher must be Read, got {pre_read!r}")
+    sys.exit(1)
+if "pre_read_memory.py" not in (events["preToolUse"][0].get("command") or ""):
+    print("FAIL  preToolUse command must invoke pre_read_memory.py")
+    sys.exit(1)
 if "tsk_" in json.dumps(hooks):
     print("FAIL  hooks.json must not contain a tsk_ key")
     sys.exit(1)
-print("ok  hooks  chat capture + postToolUse + postToolUseFailure + preCompact")
+print("ok  hooks  chat capture + postToolUse + postToolUseFailure + preToolUse + preCompact")
 
 with open(claude_market_path) as f:
     claude_market = json.load(f)
@@ -404,6 +415,7 @@ claude_required = {
     "StopFailure",
     "SessionEnd",
     "PostToolUseFailure",
+    "PreToolUse",
     "PreCompact",
 }
 if set(claude_events) != claude_required:
@@ -426,6 +438,10 @@ for name in claude_required:
 matcher = claude_events["PostToolUseFailure"][0].get("matcher")
 if matcher != "Bash|PowerShell":
     print(f"FAIL  PostToolUseFailure matcher must be Bash|PowerShell, got {matcher!r}")
+    sys.exit(1)
+pre_read = claude_events["PreToolUse"][0].get("matcher")
+if pre_read != "Read|ReadFile":
+    print(f"FAIL  Claude PreToolUse matcher must be Read|ReadFile, got {pre_read!r}")
     sys.exit(1)
 if "tsk_" in json.dumps(claude_hooks):
     print("FAIL  Claude hooks.json must not contain a tsk_ key")

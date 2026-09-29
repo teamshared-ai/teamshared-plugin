@@ -104,6 +104,7 @@ This package does **not** invent Cursor-only names.
 | `StopFailure` | Notes API-error turns; does not close the session |
 | `SessionEnd` | `memory_session_close` + distill |
 | `PostToolUseFailure` | Failed `Bash` / `PowerShell` → short episodic fact (command + error tail) |
+| `PreToolUse` (`Read|ReadFile`) | `memory_for_paths` inject before Read (fail-open ≤3s) |
 | `PreCompact` | Short session summary before compact |
 
 Hook auth is `TEAMSHARED_TOKEN` only — separate from the OAuth-authenticated

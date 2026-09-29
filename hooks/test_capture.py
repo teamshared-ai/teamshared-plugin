@@ -27,6 +27,7 @@ REQUIRED_HOOKS = {
     "sessionEnd",
     "postToolUse",
     "postToolUseFailure",
+    "preToolUse",
     "preCompact",
 }
 
@@ -951,6 +952,8 @@ class HooksManifestTests(unittest.TestCase):
         self.assertEqual(len(hooks["hooks"]["postToolUse"]), 1)
         self.assertEqual(len(hooks["hooks"]["preCompact"]), 1)
         self.assertEqual(hooks["hooks"]["postToolUse"][0]["matcher"], "Shell")
+        self.assertEqual(hooks["hooks"]["preToolUse"][0]["matcher"], "Read")
+        self.assertIn("pre_read_memory.py", hooks["hooks"]["preToolUse"][0]["command"])
         for name in REQUIRED_HOOKS:
             self.assertTrue(hooks["hooks"][name][0]["command"])
         self.assertNotIn("tsk_", json.dumps(hooks))
@@ -962,6 +965,7 @@ class HooksManifestTests(unittest.TestCase):
             "session_end.py",
             "post_tool_use.py",
             "post_tool_use_failure.py",
+            "pre_read_memory.py",
             "pre_compact.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)
