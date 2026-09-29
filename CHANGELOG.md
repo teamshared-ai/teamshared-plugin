@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **PreToolUse Read → `memory_for_paths` (#58):** Cursor `preToolUse` (matcher
+  `Read`) and Claude `PreToolUse` (matcher `Read|ReadFile`) call MCP
+  `memory_for_paths` and inject compact attributed path memory as
+  `additional_context` / `additionalContext` before the agent reads a file
+  (Mem0 `on_file_read` parity). Fail-open ≤3s; reuses capture auth
+  (Connect / `TEAMSHARED_TOKEN`). Codex out of scope. Server:
+  [teamshared#1045](https://github.com/teamshared-ai/teamshared/pull/1047).
+
 - **Rule "Staying current" (teamshared#913):** on `update_available: true`,
   tell the user to update this plugin. Never write a local
   `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin

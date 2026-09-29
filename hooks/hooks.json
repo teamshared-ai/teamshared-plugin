@@ -49,6 +49,13 @@
         "command": "python3 ${CURSOR_PLUGIN_ROOT:-.}/hooks/pre_compact.py",
         "timeout": 10
       }
+    ],
+    "preToolUse": [
+      {
+        "command": "python3 ${CURSOR_PLUGIN_ROOT:-.}/hooks/pre_read_memory.py",
+        "matcher": "Read",
+        "timeout": 5
+      }
     ]
   }
 }
