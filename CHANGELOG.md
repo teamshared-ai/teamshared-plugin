@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **SessionStart + PreCompact constraints re-attach (#59):** Cursor
+  `sessionStart` / Claude `SessionStart` append the verbatim MCP
+  `constraints` prompt (fallback `teamshared://constraints`) to
+  `additional_context` / `additionalContext` after existing bootstrap.
+  Cursor `preCompact` re-attaches via `user_message` (host cannot inject
+  `additional_context` on that event); Claude `PreCompact` uses
+  `systemMessage`, and Claude `SessionStart` with `source=compact` also
+  re-injects. Fail-open ≤3s; reuses capture auth. Server:
+  [teamshared#1046](https://github.com/teamshared-ai/teamshared/pull/1048).
+
 - **Rule "Staying current" (teamshared#913):** on `update_available: true`,
   tell the user to update this plugin. Never write a local
   `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin

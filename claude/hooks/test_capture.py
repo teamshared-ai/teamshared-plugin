@@ -18,6 +18,19 @@ if str(HERE) not in sys.path:
 
 import capture  # noqa: E402
 
+# Default: SessionStart constraints fetch is a no-op so existing tests stay
+# offline. Dedicated #59 coverage lives in hooks/test_constraints_attach.py.
+_CONSTRAINTS_FETCH_PATCH = patch.object(capture, "fetch_constraints_text", return_value="")
+
+
+def setUpModule() -> None:
+    _CONSTRAINTS_FETCH_PATCH.start()
+
+
+def tearDownModule() -> None:
+    _CONSTRAINTS_FETCH_PATCH.stop()
+
+
 REQUIRED_HOOKS = {
     "SessionStart",
     "UserPromptSubmit",
@@ -499,6 +512,7 @@ class HooksManifestTests(unittest.TestCase):
             "session_end.py",
             "post_tool_use_failure.py",
             "pre_compact.py",
+            "constraints_attach.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)
         self.assertEqual(capture.PROTOCOL_VERSION, "1.31.0")

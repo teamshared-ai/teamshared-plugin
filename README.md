@@ -194,7 +194,8 @@ scoped to that org, or mint under `/app/keys` — on the MCP headers
   ensure with `auto_recall=true`, injects a capped Cursor
   `additional_context` block (linked soul, a short playbook header when
   present, and compact `auto_recall` bullets — not full memory bodies
-  or transcripts). Explicit `memory_recall` remains preferred for
+  or transcripts), then appends the verbatim MCP `constraints` prompt
+  when the org has standing preferences (#59 / server #1046). Explicit `memory_recall` remains preferred for
   keyword work. Fail-open on MCP/auth errors. `beforeSubmitPrompt` and
   `afterAgentResponse` append redacted user/assistant text; `sessionEnd`
   closes and distills. `stop` only notes aborted/error loops (it fires
@@ -206,7 +207,9 @@ scoped to that org, or mint under `/app/keys` — on the MCP headers
   inject compact hits as `additional_context` — same pattern as
   SessionStart auto_recall. Skip when recall is empty or MCP has no token.
   That recall path never writes (`context_commit`). Fail-open if MCP is
-  unreachable. `preCompact` writes a short session summary. All reuse the
+  unreachable. `preCompact` writes a short session summary and re-attaches
+  the same `constraints` block via `user_message` (Cursor cannot inject
+  `additional_context` on `preCompact`). All reuse the
   existing Connect session — no `tsk_` in `mcp.json`. Cloud agents may skip
   `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
   Agents still recall first and may commit curated facts; hooks store the

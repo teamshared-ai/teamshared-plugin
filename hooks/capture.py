@@ -7,7 +7,8 @@ token when we can find it — not a tsk_ in mcp.json.
 
 sessionStart also injects a capped additional_context block from the
 ensure payload (soul / playbook header / optional profile / compact
-auto_recall bullets) when useful.
+auto_recall bullets) when useful, then appends the verbatim MCP
+``constraints`` prompt text when non-empty (#59 / server #1046).
 
 postToolUseFailure (and failed postToolUse) may inject compact
 memory_recall hits as additional_context. That path is read-only —
@@ -1223,6 +1224,16 @@ def ingest(
     return committed is not None
 
 
+def fetch_constraints_text(payload: dict[str, Any] | None = None) -> str:
+    """Verbatim standing constraints from MCP prompts/get (fail-open)."""
+    try:
+        import constraints_attach as _constraints_attach
+
+        return _constraints_attach.fetch_constraints_text(payload or {}) or ""
+    except Exception:
+        return ""
+
+
 def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
     extra: dict[str, Any] = {}
     env: dict[str, str] = {}
@@ -1251,6 +1262,17 @@ def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
         context = bootstrap_additional_context(ensured)
     except Exception:
         context = ""
+    try:
+        constraints = fetch_constraints_text(payload)
+    except Exception:
+        constraints = ""
+    if constraints:
+        try:
+            import constraints_attach as _constraints_attach
+
+            context = _constraints_attach.append_constraints(context, constraints)
+        except Exception:
+            context = (context + "\n\n" + constraints).strip() if context else constraints
     if context:
         extra["additional_context"] = context
     return extra
