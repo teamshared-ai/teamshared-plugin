@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Claude PreCompact — short session summary on the normal ingest path."""
+"""Claude PreCompact — summary ingest + durable-facts nudge (#63).
+
+Composes with #59 constraints re-attach when ``constraints_attach`` is
+importable (same ``systemMessage`` channel). Fail-open.
+"""
 
 from __future__ import annotations
 
@@ -8,19 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from capture import emit_ok, ingest, precompact_summary, read_stdin_json
+from durable_facts_nudge import run_precompact_with_nudge
 
 
 def main() -> int:
-    try:
-        payload = read_stdin_json()
-        summary = precompact_summary(payload)
-        if summary:
-            ingest(summary, payload=payload)
-    except Exception:
-        pass
-    emit_ok()
-    return 0
+    return run_precompact_with_nudge(host="claude")
 
 
 if __name__ == "__main__":

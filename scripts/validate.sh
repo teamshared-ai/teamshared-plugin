@@ -55,6 +55,8 @@ check "$ROOT/hooks/capture.py"
 check "$ROOT/hooks/post_tool_use.py"
 check "$ROOT/hooks/post_tool_use_failure.py"
 check "$ROOT/hooks/pre_compact.py"
+check "$ROOT/hooks/durable_facts_nudge.py"
+check "$ROOT/hooks/test_durable_facts_nudge.py"
 check "$ROOT/hooks/session_start.py"
 check "$ROOT/hooks/before_submit_prompt.py"
 check "$ROOT/hooks/after_agent_response.py"
@@ -75,6 +77,7 @@ check "$ROOT/claude/hooks/stop_failure.py"
 check "$ROOT/claude/hooks/session_end.py"
 check "$ROOT/claude/hooks/post_tool_use_failure.py"
 check "$ROOT/claude/hooks/pre_compact.py"
+check "$ROOT/claude/hooks/durable_facts_nudge.py"
 check "$ROOT/claude/hooks/test_capture.py"
 check "$ROOT/.agents/plugins/marketplace.json"
 check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
@@ -480,10 +483,17 @@ require_repo_mcp_url("https://teamshared.com/o/sapien/mcp", "bound org shape")
 print("ok  MCP url shapes  plugin /mcp; repo /mcp or /o/{slug}/mcp")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
+  python3 "$ROOT/hooks/test_durable_facts_nudge.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
   python3 "$ROOT/plugins/teamshared/hooks/test_capture.py" -q
   python3 "$ROOT/scripts/test_org_binding.py" -q
   python3 "$ROOT/scripts/test_org_bind_guidance.py" -q
+  if ! cmp -s "$ROOT/hooks/durable_facts_nudge.py" "$ROOT/claude/hooks/durable_facts_nudge.py"; then
+    echo "FAIL  claude/hooks/durable_facts_nudge.py must match hooks/durable_facts_nudge.py"
+    FAIL=1
+  else
+    echo "ok  claude/hooks/durable_facts_nudge.py  matches Cursor hooks copy"
+  fi
   if ! cmp -s "$ROOT/scripts/org_binding.py" "$ROOT/claude/hooks/org_binding.py"; then
     echo "FAIL  claude/hooks/org_binding.py must match scripts/org_binding.py"
     FAIL=1

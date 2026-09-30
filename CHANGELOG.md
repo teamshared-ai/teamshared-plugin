@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **PreCompact durable-facts nudge (#63):** after summary ingest, Cursor
+  `preCompact` / Claude `PreCompact` inject a short `user_message` /
+  `systemMessage` telling the agent to call MCP `memory_remember` for at
+  most 0–3 durable facts (15–50 words) before continuing. Skip when
+  unbound / no token; compose with #59 constraints re-attach on the same
+  channels. Codex / Dream out of scope.
+
 - **Rule "Staying current" (teamshared#913):** on `update_available: true`,
   tell the user to update this plugin. Never write a local
   `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin
