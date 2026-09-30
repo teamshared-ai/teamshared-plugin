@@ -49,6 +49,13 @@
         "command": "python3 ${CURSOR_PLUGIN_ROOT:-.}/hooks/pre_compact.py",
         "timeout": 10
       }
+    ],
+    "preToolUse": [
+      {
+        "command": "python3 ${CURSOR_PLUGIN_ROOT:-.}/hooks/block_memory_write.py",
+        "matcher": "Write|Edit|MultiEdit",
+        "timeout": 5
+      }
     ]
   }
 }

@@ -104,7 +104,7 @@ This package does **not** invent Cursor-only names.
 | `StopFailure` | Notes API-error turns; does not close the session |
 | `SessionEnd` | `memory_session_close` + distill |
 | `PostToolUseFailure` | Failed `Bash` / `PowerShell` → short episodic fact (command + error tail) |
-| `PreCompact` | Short session summary before compact |
+| `PreToolUse (Write|Edit|MultiEdit blocks local MEMORY.md → `memory_remember`), PreCompact` | Short session summary before compact |
 
 Hook auth is `TEAMSHARED_TOKEN` only — separate from the OAuth-authenticated
 MCP connection above. Secrets are scrubbed. Every handler is fail-open (unset

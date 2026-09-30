@@ -25,6 +25,7 @@ REQUIRED_HOOKS = {
     "StopFailure",
     "SessionEnd",
     "PostToolUseFailure",
+    "PreToolUse",
     "PreCompact",
 }
 
@@ -482,6 +483,15 @@ class HooksManifestTests(unittest.TestCase):
         hooks = json.loads((HERE / "hooks.json").read_text())
         events = set(hooks["hooks"])
         self.assertEqual(events, REQUIRED_HOOKS)
+        write_entries = [
+            e for e in hooks["hooks"]["PreToolUse"]
+            if any(
+                "block_memory_write.py" in str(a)
+                for a in ((e.get("hooks") or [{}])[0].get("args") or [])
+            )
+        ]
+        self.assertEqual(len(write_entries), 1)
+        self.assertEqual(write_entries[0].get("matcher"), "Write|Edit|MultiEdit")
         matcher = hooks["hooks"]["PostToolUseFailure"][0]["matcher"]
         self.assertEqual(matcher, "Bash|PowerShell")
         self.assertNotIn("tsk_", json.dumps(hooks))
