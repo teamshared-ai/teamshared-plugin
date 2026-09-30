@@ -206,7 +206,7 @@ scoped to that org, or mint under `/app/keys` — on the MCP headers
   inject compact hits as `additional_context` — same pattern as
   SessionStart auto_recall. Skip when recall is empty or MCP has no token.
   That recall path never writes (`context_commit`). Fail-open if MCP is
-  unreachable. `preCompact` writes a short session summary. All reuse the
+  unreachable. `preCompact` writes a short session summary and, when auth is available, nudges the agent to `memory_remember` at most 0–3 durable facts before continuing (#63; composes with #59 constraints re-attach). All reuse the
   existing Connect session — no `tsk_` in `mcp.json`. Cloud agents may skip
   `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
   Agents still recall first and may commit curated facts; hooks store the
