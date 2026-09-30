@@ -55,6 +55,8 @@ check "$ROOT/hooks/capture.py"
 check "$ROOT/hooks/post_tool_use.py"
 check "$ROOT/hooks/post_tool_use_failure.py"
 check "$ROOT/hooks/pre_compact.py"
+check "$ROOT/hooks/block_memory_write.py"
+check "$ROOT/hooks/test_block_memory_write.py"
 check "$ROOT/hooks/session_start.py"
 check "$ROOT/hooks/before_submit_prompt.py"
 check "$ROOT/hooks/after_agent_response.py"
@@ -75,6 +77,7 @@ check "$ROOT/claude/hooks/stop_failure.py"
 check "$ROOT/claude/hooks/session_end.py"
 check "$ROOT/claude/hooks/post_tool_use_failure.py"
 check "$ROOT/claude/hooks/pre_compact.py"
+check "$ROOT/claude/hooks/block_memory_write.py"
 check "$ROOT/claude/hooks/test_capture.py"
 check "$ROOT/.agents/plugins/marketplace.json"
 check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
@@ -302,6 +305,7 @@ required = {
     "sessionEnd",
     "postToolUse",
     "postToolUseFailure",
+    "preToolUse",
     "preCompact",
 }
 if set(events) != required:
@@ -315,10 +319,21 @@ matcher = events["postToolUse"][0].get("matcher")
 if matcher != "Shell":
     print(f"FAIL  postToolUse matcher must be Shell, got {matcher!r}")
     sys.exit(1)
+pre_write = None
+for entry in events.get("preToolUse") or []:
+    if "block_memory_write.py" in (entry.get("command") or ""):
+        pre_write = entry
+        break
+if not pre_write:
+    print("FAIL  preToolUse must include block_memory_write.py")
+    sys.exit(1)
+if pre_write.get("matcher") != "Write|Edit|MultiEdit":
+    print(f"FAIL  block_memory_write matcher must be Write|Edit|MultiEdit, got {pre_write.get('matcher')!r}")
+    sys.exit(1)
 if "tsk_" in json.dumps(hooks):
     print("FAIL  hooks.json must not contain a tsk_ key")
     sys.exit(1)
-print("ok  hooks  chat capture + postToolUse + postToolUseFailure + preCompact")
+print("ok  hooks  chat capture + postToolUse + postToolUseFailure + preToolUse + preCompact")
 
 with open(claude_market_path) as f:
     claude_market = json.load(f)
@@ -404,6 +419,7 @@ claude_required = {
     "StopFailure",
     "SessionEnd",
     "PostToolUseFailure",
+    "PreToolUse",
     "PreCompact",
 }
 if set(claude_events) != claude_required:
@@ -426,6 +442,21 @@ for name in claude_required:
 matcher = claude_events["PostToolUseFailure"][0].get("matcher")
 if matcher != "Bash|PowerShell":
     print(f"FAIL  PostToolUseFailure matcher must be Bash|PowerShell, got {matcher!r}")
+    sys.exit(1)
+pre_write = None
+for entry in claude_events.get("PreToolUse") or []:
+    args = ((entry.get("hooks") or [{}])[0].get("args") or [""])
+    if args and "block_memory_write.py" in args[0]:
+        pre_write = entry
+        break
+if not pre_write:
+    print("FAIL  Claude PreToolUse must include block_memory_write.py")
+    sys.exit(1)
+if pre_write.get("matcher") != "Write|Edit|MultiEdit":
+    print(
+        "FAIL  Claude block_memory_write matcher must be Write|Edit|MultiEdit, "
+        f"got {pre_write.get('matcher')!r}"
+    )
     sys.exit(1)
 if "tsk_" in json.dumps(claude_hooks):
     print("FAIL  Claude hooks.json must not contain a tsk_ key")
@@ -480,10 +511,17 @@ require_repo_mcp_url("https://teamshared.com/o/sapien/mcp", "bound org shape")
 print("ok  MCP url shapes  plugin /mcp; repo /mcp or /o/{slug}/mcp")
 PY
   python3 "$ROOT/hooks/test_capture.py" -q
+  python3 "$ROOT/hooks/test_block_memory_write.py" -q
   python3 "$ROOT/claude/hooks/test_capture.py" -q
   python3 "$ROOT/plugins/teamshared/hooks/test_capture.py" -q
   python3 "$ROOT/scripts/test_org_binding.py" -q
   python3 "$ROOT/scripts/test_org_bind_guidance.py" -q
+  if ! cmp -s "$ROOT/hooks/block_memory_write.py" "$ROOT/claude/hooks/block_memory_write.py"; then
+    echo "FAIL  claude/hooks/block_memory_write.py must match hooks/block_memory_write.py"
+    FAIL=1
+  else
+    echo "ok  claude/hooks/block_memory_write.py  matches Cursor hooks copy"
+  fi
   if ! cmp -s "$ROOT/scripts/org_binding.py" "$ROOT/claude/hooks/org_binding.py"; then
     echo "FAIL  claude/hooks/org_binding.py must match scripts/org_binding.py"
     FAIL=1

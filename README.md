@@ -4,7 +4,7 @@ Registers the teamshared MCP server. The **Cursor** plugin also ships the
 recall-first memory rule and Cursor hooks that capture Agent Chat into
 TeamShared (`sessionStart`, `beforeSubmitPrompt`, `afterAgentResponse`,
 `stop`, `sessionEnd`) plus `postToolUse` (failed test/lint/shell),
-`postToolUseFailure` (read-only recall), and `preCompact`. The Cursor
+`postToolUseFailure` (read-only recall), `preToolUse` Write|Edit → block local MEMORY.md, and `preCompact`. The Cursor
 plugin still has no skills, slash commands, or extra agents.
 
 This repo also ships a **Claude Code** marketplace plugin under `claude/`
@@ -33,7 +33,7 @@ copy: [`AGENTS.md`](AGENTS.md).
 |---|---|
 | `mcp.json` | Registers `https://teamshared.com/mcp` (URL only; Cursor OAuth Connect) |
 | `rules/teamshared.mdc` | Lean always-on fetch/store loop (`alwaysApply`); tool encyclopedia lives in `memory_tools_catalog` |
-| `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell), `postToolUseFailure` (read-only recall), and `preCompact` |
+| `hooks/` | Cursor hooks: Agent Chat capture plus `postToolUse` (failed test/lint/shell), `postToolUseFailure` (read-only recall), `preToolUse` Write|Edit block local MEMORY.md, and `preCompact` |
 | `claude/` | Claude Code plugin (remote MCP via native `/mcp` OAuth + protocol 1.31.0 + capture hooks needing `TEAMSHARED_TOKEN`) |
 | `.claude-plugin/marketplace.json` | Claude Code marketplace catalog (`/plugin marketplace add teamshared-ai/teamshared-plugin`) |
 | `.agents/plugins/marketplace.json` | Codex marketplace catalog (`codex plugin marketplace add teamshared-ai/teamshared-plugin`) |
@@ -206,7 +206,7 @@ scoped to that org, or mint under `/app/keys` — on the MCP headers
   inject compact hits as `additional_context` — same pattern as
   SessionStart auto_recall. Skip when recall is empty or MCP has no token.
   That recall path never writes (`context_commit`). Fail-open if MCP is
-  unreachable. `preCompact` writes a short session summary. All reuse the
+  unreachable. On Cursor/Claude `preToolUse` (matcher `Write|Edit|MultiEdit`) writes to `MEMORY.md` or `.claude/memory/*` are denied with guidance to use MCP `memory_remember` (or `context_commit` for session distill). `preCompact` writes a short session summary. All reuse the
   existing Connect session — no `tsk_` in `mcp.json`. Cloud agents may skip
   `sessionStart` / `sessionEnd`; prompt/response hooks still capture turns.
   Agents still recall first and may commit curated facts; hooks store the

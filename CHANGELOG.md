@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **PreToolUse Write|Edit block local MEMORY.md (#62):** Cursor `preToolUse`
+  and Claude `PreToolUse` (matcher `Write|Edit|MultiEdit`) deny writes to
+  `**/MEMORY.md` and `**/.claude/memory/**`, redirecting to MCP
+  `memory_remember` / `context_commit`. Fail-open on parse errors;
+  intentional deny only on path match. Same `preToolUse` key as #58 /
+  PR #60 (different matcher). Codex out of scope.
+
 - **Rule "Staying current" (teamshared#913):** on `update_available: true`,
   tell the user to update this plugin. Never write a local
   `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin

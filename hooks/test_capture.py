@@ -27,6 +27,7 @@ REQUIRED_HOOKS = {
     "sessionEnd",
     "postToolUse",
     "postToolUseFailure",
+    "preToolUse",
     "preCompact",
 }
 
@@ -951,6 +952,12 @@ class HooksManifestTests(unittest.TestCase):
         self.assertEqual(len(hooks["hooks"]["postToolUse"]), 1)
         self.assertEqual(len(hooks["hooks"]["preCompact"]), 1)
         self.assertEqual(hooks["hooks"]["postToolUse"][0]["matcher"], "Shell")
+        write_entries = [
+            e for e in hooks["hooks"]["preToolUse"]
+            if "block_memory_write.py" in e.get("command", "")
+        ]
+        self.assertEqual(len(write_entries), 1)
+        self.assertEqual(write_entries[0]["matcher"], "Write|Edit|MultiEdit")
         for name in REQUIRED_HOOKS:
             self.assertTrue(hooks["hooks"][name][0]["command"])
         self.assertNotIn("tsk_", json.dumps(hooks))
