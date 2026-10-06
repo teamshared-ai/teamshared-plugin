@@ -26,6 +26,7 @@ REQUIRED_HOOKS = {
     "SessionEnd",
     "PostToolUseFailure",
     "PreCompact",
+    "SubagentStart",
 }
 
 
@@ -477,6 +478,190 @@ class OrgBindingCaptureTests(unittest.TestCase):
             self.assertEqual(self._ensure_url(root), "https://teamshared.com/mcp")
 
 
+def _no_network(*_args, **_kwargs):
+    raise AssertionError("SubagentStart must not touch the network")
+
+
+class SubagentStartTests(unittest.TestCase):
+    """#66: SubagentStart injects protocol + parent's cached recall, offline."""
+
+    def _session_start_with_recall(self, cid: str, records: list[dict]) -> None:
+        def fake_call(name: str, arguments: dict, token: str, url: str = capture.MCP_URL, timeout: float = 6):
+            return {
+                "session_id": "ts-parent",
+                "auto_recall": {"skipped": False, "records": records},
+            }
+
+        with patch.object(capture, "mcp_call", side_effect=fake_call):
+            with patch.object(capture, "resolve_token", return_value="tsk_testtoken"):
+                capture.handle_session_start(
+                    {"session_id": cid, "source": "startup", "cwd": str(Path.cwd())}
+                )
+
+    def _subagent(self, cid: str | None) -> str:
+        payload = {
+            "hook_event_name": "SubagentStart",
+            "agent_id": "agent-1",
+            "agent_type": "Explore",
+            "cwd": str(Path.cwd()),
+        }
+        if cid:
+            payload["session_id"] = cid
+        with patch.object(capture, "mcp_call", side_effect=_no_network):
+            with patch.object(capture.urllib.request, "urlopen", side_effect=_no_network):
+                with patch.object(capture, "resolve_token", side_effect=_no_network):
+                    extra = capture.handle_subagent_start(payload)
+        out = extra["hookSpecificOutput"]
+        self.assertEqual(out["hookEventName"], "SubagentStart")
+        return out["additionalContext"]
+
+    def test_protocol_plus_cached_recall_for_known_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                self._session_start_with_recall(
+                    "claude-parent",
+                    [{"subject": "deploys", "content": "staging deploys run from main via Railway"}],
+                )
+                ctx = self._subagent("claude-parent")
+                # Parent mapping untouched; no new TeamShared session.
+                self.assertEqual(capture.mapped_session_id("claude-parent"), "ts-parent")
+        self.assertTrue(ctx.startswith(capture.PROTOCOL_CONTEXT.rstrip()))
+        self.assertIn("1.31.0", ctx)
+        self.assertIn("## Subagent", ctx)
+        self.assertIn("fresh=false", ctx)
+        self.assertIn("## Recalled", ctx)
+        self.assertIn("staging deploys run from main", ctx)
+        self.assertLess(len(ctx), 10000)
+
+    def test_protocol_only_when_no_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                ctx = self._subagent("claude-unknown")
+                ctx_no_id = self._subagent(None)
+                self.assertFalse(cache.exists())
+        self.assertEqual(ctx, capture.subagent_base_context())
+        self.assertEqual(ctx_no_id, capture.subagent_base_context())
+        self.assertIn(capture.PROTOCOL_CONTEXT.rstrip(), ctx)
+        self.assertNotIn("## Recalled", ctx)
+
+    def test_other_session_recall_does_not_leak(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                self._session_start_with_recall(
+                    "claude-a", [{"subject": "a-only", "content": "fact for session A"}]
+                )
+                ctx = self._subagent("claude-b")
+        self.assertNotIn("fact for session A", ctx)
+
+    def test_oversized_recall_trimmed_protocol_intact(self) -> None:
+        huge = "## Recalled\n" + "\n".join(f"- hit {i}: " + ("y" * 120) for i in range(400))
+        self.assertGreater(len(huge), 20000)
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                capture.store_recall_block("claude-big", huge)
+                ctx = self._subagent("claude-big")
+        self.assertLess(len(ctx), 10000)
+        self.assertLessEqual(len(ctx), capture.MAX_ADDITIONAL_CONTEXT_CHARS)
+        self.assertTrue(ctx.startswith(capture.subagent_base_context()))
+        self.assertIn("## Recalled", ctx)
+        self.assertIn("- hit 0:", ctx)
+        self.assertTrue(ctx.endswith("…"))
+
+    def test_fit_never_trims_protocol(self) -> None:
+        base = "P" * 9600
+        self.assertEqual(capture.fit_additional_context(base, "extra"), base)
+
+    def test_cache_exception_falls_back_to_protocol(self) -> None:
+        with patch.object(capture, "cached_recall_block", side_effect=RuntimeError("boom")):
+            ctx = self._subagent("claude-parent")
+        self.assertEqual(ctx, capture.subagent_base_context())
+
+    def test_corrupt_cache_falls_back_to_protocol(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            cache.write_text("{not json", encoding="utf-8")
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                ctx = self._subagent("claude-parent")
+            cache.write_text(json.dumps({"recall": {"claude-parent": 42}}), encoding="utf-8")
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                ctx2 = self._subagent("claude-parent")
+        self.assertEqual(ctx, capture.subagent_base_context())
+        self.assertEqual(ctx2, capture.subagent_base_context())
+
+    def test_failed_session_start_keeps_last_good_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                self._session_start_with_recall(
+                    "claude-resume", [{"subject": "kept", "content": "still here"}]
+                )
+                with patch.object(capture, "mcp_call", return_value=None):
+                    with patch.object(capture, "resolve_token", return_value=None):
+                        capture.handle_session_start(
+                            {"session_id": "claude-resume", "source": "resume"}
+                        )
+                ctx = self._subagent("claude-resume")
+        self.assertIn("still here", ctx)
+
+    def test_session_end_drops_cached_recall(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                capture.store_recall_block("claude-end", "## Recalled\n- x")
+                self.assertTrue(capture.cached_recall_block("claude-end"))
+                capture.drop_mapped_session("claude-end")
+                self.assertEqual(capture.cached_recall_block("claude-end"), "")
+
+    def test_recall_cache_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            with patch.dict(os.environ, {capture.HOOK_CACHE_ENV: str(cache)}, clear=False):
+                for i in range(capture.MAX_CACHED_RECALL_SESSIONS + 5):
+                    capture.store_recall_block(f"c{i}", f"## Recalled\n- {i}")
+                data = json.loads(cache.read_text())
+        self.assertEqual(len(data["recall"]), capture.MAX_CACHED_RECALL_SESSIONS)
+        self.assertNotIn("c0", data["recall"])
+
+    def test_script_exits_zero_on_bad_input_and_corrupt_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "sessions.json"
+            cache.write_text("garbage", encoding="utf-8")
+            env = dict(os.environ)
+            env[capture.HOOK_CACHE_ENV] = str(cache)
+            env.pop("TEAMSHARED_TOKEN", None)
+            env.pop("TEAMSHARED_STATE_TOKEN", None)
+            for stdin in ("not json", json.dumps({"session_id": "x", "agent_type": "Plan"}), ""):
+                proc = subprocess.run(
+                    [sys.executable, str(HERE / "subagent_start.py")],
+                    input=stdin,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    env=env,
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                out = json.loads(proc.stdout)
+                ctx = out["hookSpecificOutput"]["additionalContext"]
+                self.assertEqual(out["hookSpecificOutput"]["hookEventName"], "SubagentStart")
+                self.assertIn("1.31.0", ctx)
+                self.assertLess(len(ctx), 10000)
+
+    def test_handler_exception_still_exits_zero(self) -> None:
+        import io
+
+        buf = io.StringIO()
+        with patch.object(capture, "subagent_base_context", side_effect=RuntimeError("boom")):
+            with patch.object(capture.sys, "stdin", io.StringIO("{}")):
+                with patch.object(capture.sys, "stdout", buf):
+                    code = capture.run_hook(capture.handle_subagent_start)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(buf.getvalue()), {})
+
+
 class HooksManifestTests(unittest.TestCase):
     def test_registers_official_claude_events(self) -> None:
         hooks = json.loads((HERE / "hooks.json").read_text())
@@ -499,8 +684,13 @@ class HooksManifestTests(unittest.TestCase):
             "session_end.py",
             "post_tool_use_failure.py",
             "pre_compact.py",
+            "subagent_start.py",
         ):
             self.assertTrue((HERE / script).is_file(), script)
+        subagent = hooks["hooks"]["SubagentStart"][0]
+        self.assertNotIn("matcher", subagent)
+        self.assertEqual(subagent["hooks"][0]["timeout"], 10)
+        self.assertTrue(subagent["hooks"][0]["args"][0].endswith("/subagent_start.py"))
         self.assertEqual(capture.PROTOCOL_VERSION, "1.31.0")
         self.assertIn("1.31.0", capture.PROTOCOL_CONTEXT)
         self.assertIn("memory_changes_since", capture.PROTOCOL_CONTEXT)

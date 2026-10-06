@@ -17,6 +17,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -49,6 +50,10 @@ MAX_SESSION_START_ANCHOR_CHARS = 400
 MAX_AUTO_RECALL_HITS = 5
 MAX_AUTO_RECALL_LINE_CHARS = 140
 MAX_AUTO_RECALL_BLOCK_CHARS = 800
+# Claude Code caps each additionalContext string at 10,000 chars (over the cap
+# it spills to a file and shows only a preview). Stay under with margin.
+MAX_ADDITIONAL_CONTEXT_CHARS = 9500
+MAX_CACHED_RECALL_SESSIONS = 50
 MCP_TIMEOUT_SEC = 6
 SESSION_END_MCP_TIMEOUT_SEC = 1.2
 HOOK_CACHE_ENV = "TEAMSHARED_CLAUDE_HOOK_CACHE"
@@ -75,8 +80,8 @@ _SECRET_RES = [
 _URL_USERINFO_RE = re.compile(r"(https?://)([^/@:\s]+):([^@/\s]+)@")
 _EXIT_CODE_RE = re.compile(r"(?i)exit code\s+(\d+)")
 
-# Injected on SessionStart (official additionalContext). Keep under the
-# 10k hook-output cap. Full protocol lives in skills/teamshared-memory.
+# Injected on SessionStart and SubagentStart (official additionalContext).
+# Keep under the 10k hook-output cap. Full protocol lives in skills/teamshared-memory.
 PROTOCOL_CONTEXT = f"""# TeamShared memory protocol {PROTOCOL_VERSION}
 
 The `teamshared` MCP server is durable memory across sessions and repos.
@@ -481,10 +486,51 @@ def drop_mapped_session(cid: str | None) -> None:
         return
     data = _load_session_cache()
     convos = data.get("conversations")
-    if not isinstance(convos, dict) or cid not in convos:
+    recall = data.get("recall")
+    changed = False
+    if isinstance(convos, dict) and cid in convos:
+        convos.pop(cid, None)
+        changed = True
+    if isinstance(recall, dict) and cid in recall:
+        recall.pop(cid, None)
+        changed = True
+    if changed:
+        _write_session_cache(data)
+
+
+def store_recall_block(cid: str | None, block: str) -> None:
+    """Cache the SessionStart ``## Recalled`` block for this Claude session.
+
+    SubagentStart reads it back so subagents get the parent's recall without
+    a network call. Kept in the same hook cache file under ``recall``; capped
+    to the most recent ``MAX_CACHED_RECALL_SESSIONS`` sessions.
+    """
+    if not cid:
         return
-    convos.pop(cid, None)
+    data = _load_session_cache()
+    recall = data.get("recall")
+    if not isinstance(recall, dict):
+        recall = {}
+    recall.pop(cid, None)
+    recall[cid] = {"block": strip_secrets(block or ""), "at": int(time.time())}
+    while len(recall) > MAX_CACHED_RECALL_SESSIONS:
+        recall.pop(next(iter(recall)))
+    data["recall"] = recall
     _write_session_cache(data)
+
+
+def cached_recall_block(cid: str | None) -> str:
+    """Last SessionStart recall block for ``cid`` (empty when none). Local only."""
+    if not cid:
+        return ""
+    recall = _load_session_cache().get("recall")
+    if not isinstance(recall, dict):
+        return ""
+    entry = recall.get(cid)
+    if isinstance(entry, dict):
+        block = entry.get("block")
+        return block.strip() if isinstance(block, str) else ""
+    return ""
 
 
 def user_prompt_text(payload: dict[str, Any]) -> str:
@@ -903,9 +949,73 @@ def handle_session_start(payload: dict[str, Any]) -> dict[str, Any]:
         recalled = ""
     if recalled:
         context = f"{PROTOCOL_CONTEXT.rstrip()}\n\n{recalled}"
+    if ensured is not None:
+        # #66: cache for SubagentStart (no network there). Skip when ensure
+        # failed so a flaky resume does not wipe the last good block.
+        try:
+            store_recall_block(conversation_id(payload), recalled)
+        except Exception:
+            pass
     return {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
+            "additionalContext": context,
+        }
+    }
+
+
+SUBAGENT_CONTEXT_NOTE = """## Subagent
+
+This is a subagent of a Claude Code session that already ran
+`memory_session_ensure`. The recalled memory below (if any) is the parent
+session's. When this subagent calls `memory_session_ensure`, it passes
+`fresh=false` so it joins the parent's working session. Subagent transcripts
+are not captured by hooks; durable findings go in `context_commit` facts or
+the reply to the parent."""
+
+
+def fit_additional_context(
+    base: str, extra: str, limit: int = MAX_ADDITIONAL_CONTEXT_CHARS
+) -> str:
+    """Join ``base`` + ``extra`` under ``limit``; trim ``extra`` first, never ``base``."""
+    base = base.rstrip()
+    extra = (extra or "").strip()
+    if not extra:
+        return base
+    room = limit - len(base) - 2
+    if room <= 1:
+        return base
+    if len(extra) > room:
+        cut = extra[: room - 1]
+        nl = cut.rfind("\n")
+        if nl > 0:
+            cut = cut[:nl]
+        extra = cut.rstrip() + "\n…"
+    return f"{base}\n\n{extra}"
+
+
+def subagent_base_context() -> str:
+    return f"{PROTOCOL_CONTEXT.rstrip()}\n\n{SUBAGENT_CONTEXT_NOTE}"
+
+
+def handle_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
+    """Claude SubagentStart: protocol + parent's cached recall. No network (#66).
+
+    ``session_id`` in the input is the parent's, so the cache written by
+    SessionStart is keyed the same way. No new TeamShared session is opened.
+    """
+    base = subagent_base_context()
+    try:
+        recalled = cached_recall_block(conversation_id(payload))
+    except Exception:
+        recalled = ""
+    try:
+        context = fit_additional_context(base, recalled)
+    except Exception:
+        context = base
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "SubagentStart",
             "additionalContext": context,
         }
     }
