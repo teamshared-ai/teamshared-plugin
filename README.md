@@ -82,6 +82,8 @@ work fine either way. From chat, call `org_bind(slug=...)` (CLI
 `teamshared org bind <slug>` is optional) so capture follows the org; do
 not add a project `.mcp.json` TeamShared server.
 Unbound `/mcp` keeps working. `SessionStart` injects protocol 1.31.0;
+`SubagentStart` gives every subagent the same protocol plus the parent's
+cached recall (no extra network call);
 `/teamshared:status` checks health + version. Details:
 [`claude/README.md`](claude/README.md).
 

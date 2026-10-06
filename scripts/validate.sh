@@ -75,6 +75,7 @@ check "$ROOT/claude/hooks/stop_failure.py"
 check "$ROOT/claude/hooks/session_end.py"
 check "$ROOT/claude/hooks/post_tool_use_failure.py"
 check "$ROOT/claude/hooks/pre_compact.py"
+check "$ROOT/claude/hooks/subagent_start.py"
 check "$ROOT/claude/hooks/test_capture.py"
 check "$ROOT/.agents/plugins/marketplace.json"
 check "$ROOT/plugins/teamshared/.codex-plugin/plugin.json"
@@ -405,6 +406,7 @@ claude_required = {
     "SessionEnd",
     "PostToolUseFailure",
     "PreCompact",
+    "SubagentStart",
 }
 if set(claude_events) != claude_required:
     print(
@@ -427,10 +429,20 @@ matcher = claude_events["PostToolUseFailure"][0].get("matcher")
 if matcher != "Bash|PowerShell":
     print(f"FAIL  PostToolUseFailure matcher must be Bash|PowerShell, got {matcher!r}")
     sys.exit(1)
+subagent_group = claude_events["SubagentStart"][0]
+if subagent_group.get("matcher") not in (None, "", "*"):
+    print(
+        "FAIL  Claude SubagentStart must have no matcher (all agent types), "
+        f"got {subagent_group.get('matcher')!r}"
+    )
+    sys.exit(1)
+if "subagent_start.py" not in subagent_group["hooks"][0]["args"][0]:
+    print("FAIL  Claude SubagentStart must invoke subagent_start.py")
+    sys.exit(1)
 if "tsk_" in json.dumps(claude_hooks):
     print("FAIL  Claude hooks.json must not contain a tsk_ key")
     sys.exit(1)
-print("ok  Claude hooks  official events + capture")
+print("ok  Claude hooks  official events + capture + SubagentStart")
 
 from pathlib import Path
 skill = Path(claude_skill_path).read_text()
@@ -872,6 +884,7 @@ fi
 if ! grep -q 'SessionStart' "$ROOT/claude/README.md" \
   || ! grep -q 'UserPromptSubmit' "$ROOT/claude/README.md" \
   || ! grep -q 'PostToolUseFailure' "$ROOT/claude/README.md" \
+  || ! grep -q 'SubagentStart' "$ROOT/claude/README.md" \
   || ! grep -q '1.31.0' "$ROOT/claude/README.md" \
   || ! grep -q '/teamshared:status' "$ROOT/claude/README.md" \
   || ! grep -q '~/.claude/rules/teamshared.md' "$ROOT/claude/README.md"; then

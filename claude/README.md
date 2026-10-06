@@ -105,6 +105,7 @@ This package does **not** invent Cursor-only names.
 | `SessionEnd` | `memory_session_close` + distill |
 | `PostToolUseFailure` | Failed `Bash` / `PowerShell` → short episodic fact (command + error tail) |
 | `PreCompact` | Short session summary before compact |
+| `SubagentStart` | Injects protocol 1.31.0 plus the parent session's cached SessionStart recall into every subagent (`additionalContext`, all agent types). Local cache only — no network call, no new TeamShared session; protocol-only when no cache |
 
 Hook auth is `TEAMSHARED_TOKEN` only — separate from the OAuth-authenticated
 MCP connection above. Secrets are scrubbed. Every handler is fail-open (unset

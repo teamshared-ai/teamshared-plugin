@@ -1,5 +1,5 @@
 {
-  "description": "TeamShared SessionStart protocol injection and chat-capture hooks (official Claude Code events only)",
+  "description": "TeamShared SessionStart/SubagentStart protocol injection and chat-capture hooks (official Claude Code events only)",
   "hooks": {
     "SessionStart": [
       {
@@ -81,6 +81,18 @@
             "type": "command",
             "command": "python3",
             "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/pre_compact.py"],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/subagent_start.py"],
             "timeout": 10
           }
         ]

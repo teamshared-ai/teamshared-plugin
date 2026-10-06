@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Claude SubagentStart protocol + parent recall (#66):** new Claude Code
+  `SubagentStart` hook (no matcher, all agent types) injects protocol
+  1.31.0, a short subagent note (`fresh=false` joins the parent's working
+  session), and the parent session's SessionStart `## Recalled` block via
+  `hookSpecificOutput.additionalContext`. SessionStart now caches that block
+  locally (hook cache file, `recall` key, last 50 sessions) so SubagentStart
+  makes no network call and opens no TeamShared session. Protocol-only when
+  no cache; output stays under the 10,000-char cap (recall trimmed first,
+  protocol never). Fail-open: any error exits 0. Cursor and Codex unchanged.
+
 - **Rule "Staying current" (teamshared#913):** on `update_available: true`,
   tell the user to update this plugin. Never write a local
   `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin
