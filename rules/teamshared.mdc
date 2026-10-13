@@ -47,6 +47,7 @@ Run in order:
    description, body_md, slug}` from the ensure payload.
 2. **`memory_recall(...)`** for keyword search (architecture, debugging, past
    work). Named playbook/skill/entity → get-by-name, not recall. Resume handoff: `memory_changes_since(cursor=...)` for durable deltas (opaque cursor); still `memory_recall` for search.
+   A recalled line cut off with `…` that matters → `memory_get(ids=[<id from its [m:…] tag>])`, not a new recall.
 3. **Do the work.**
 4. **`context_commit(summary=..., facts=[...], repo=..., github=..., close=<done?>)`**
    — last MCP call of the turn. `close=true` when the task is done or the user

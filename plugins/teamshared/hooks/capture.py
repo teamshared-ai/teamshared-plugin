@@ -738,6 +738,21 @@ def _nonempty_text(value: Any) -> str:
     return ""
 
 
+_AUTO_RECALL_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
+AUTO_RECALL_FOOTER = "Full text: memory_get(ids=[{ids}])"
+
+
+def _auto_recall_hit_id(hit: dict[str, Any]) -> str:
+    """Full memory id for ``memory_get`` (it takes exact ids, not prefixes)."""
+    for key in ("id", "memory_id"):
+        value = hit.get(key)
+        if isinstance(value, str):
+            value = value.strip()
+            if _AUTO_RECALL_ID_RE.fullmatch(value):
+                return value
+    return ""
+
+
 def format_auto_recall_hits(ensured: dict[str, Any] | None) -> str:
     """Compact bullet list from ensure ``auto_recall.records`` (#720) or ``hits``."""
     payload = _tool_payload(ensured)
@@ -749,7 +764,7 @@ def format_auto_recall_hits(ensured: dict[str, Any] | None) -> str:
         hits = block.get("hits")
     if not isinstance(hits, list) or not hits:
         return ""
-    lines: list[str] = []
+    entries: list[tuple[str, str]] = []
     for hit in hits[:MAX_AUTO_RECALL_HITS]:
         if not isinstance(hit, dict):
             continue
@@ -767,12 +782,25 @@ def format_auto_recall_hits(ensured: dict[str, Any] | None) -> str:
             line = f"- {content}"
         else:
             continue
-        lines.append(clamp(line, MAX_AUTO_RECALL_LINE_CHARS))
-    if not lines:
+        memory_id = _auto_recall_hit_id(hit)
+        if memory_id:
+            tag = f"- [m:{memory_id}] "
+            body = clamp(line[2:], max(MAX_AUTO_RECALL_LINE_CHARS - len(tag), 1))
+            entries.append((tag + body, memory_id))
+        else:
+            entries.append((clamp(line, MAX_AUTO_RECALL_LINE_CHARS), ""))
+    if not entries:
         return ""
-    return clamp(
-        strip_secrets("## Recalled\n" + "\n".join(lines)), MAX_AUTO_RECALL_BLOCK_CHARS
-    )
+    for count in range(len(entries), 0, -1):
+        shown = entries[:count]
+        text = "## Recalled\n" + "\n".join(line for line, _ in shown)
+        ids = [memory_id for _, memory_id in shown if memory_id]
+        if ids:
+            text += "\n" + AUTO_RECALL_FOOTER.format(ids=", ".join(ids))
+        block = strip_secrets(text)
+        if len(block) <= MAX_AUTO_RECALL_BLOCK_CHARS:
+            return block
+    return clamp(strip_secrets("## Recalled\n" + entries[0][0]), MAX_AUTO_RECALL_BLOCK_CHARS)
 
 
 def _scope_args(payload: dict[str, Any] | None) -> tuple[str, str | None, str | None]:

@@ -914,6 +914,115 @@ class OrgBindingCaptureTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         return calls[0] or ""
 
+    def test_auto_recall_hits_with_ids_get_tag_and_footer(self) -> None:
+        first = "3f2a9c1e-7b4d-4e6a-9c1f-0a1b2c3d4e5f"
+        second = "9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a"
+        out = capture.format_auto_recall_hits(
+            {
+                "auto_recall": {
+                    "records": [
+                        {"id": first, "subject": "ranking", "content": "RRF then repo boost"},
+                        {"memory_id": second, "content": "use memory_get for detail"},
+                    ]
+                }
+            }
+        )
+        self.assertEqual(
+            out,
+            "## Recalled\n"
+            f"- [m:{first}] ranking: RRF then repo boost\n"
+            f"- [m:{second}] use memory_get for detail\n"
+            f"Full text: memory_get(ids=[{first}, {second}])",
+        )
+
+    def test_auto_recall_hits_without_ids_unchanged(self) -> None:
+        out = capture.format_auto_recall_hits(
+            {
+                "auto_recall": {
+                    "records": [
+                        {"subject": "ranking", "content": "RRF then repo boost"},
+                        {"content": "second hit"},
+                        {"id": "", "content": "blank id"},
+                        {"id": "bad id]\nwith junk", "content": "unsafe id"},
+                    ]
+                }
+            }
+        )
+        self.assertEqual(
+            out,
+            "## Recalled\n"
+            "- ranking: RRF then repo boost\n"
+            "- second hit\n"
+            "- blank id\n"
+            "- unsafe id",
+        )
+        self.assertNotIn("memory_get", out)
+
+    def test_auto_recall_mixed_ids_footer_lists_only_tagged(self) -> None:
+        mid = "3f2a9c1e-7b4d-4e6a-9c1f-0a1b2c3d4e5f"
+        out = capture.format_auto_recall_hits(
+            {
+                "auto_recall": {
+                    "records": [
+                        {"content": "no id here"},
+                        {"id": mid, "content": "has id"},
+                    ]
+                }
+            }
+        )
+        self.assertIn("- no id here\n", out)
+        self.assertIn(f"- [m:{mid}] has id\n", out)
+        self.assertTrue(out.endswith(f"Full text: memory_get(ids=[{mid}])"))
+
+    def test_auto_recall_long_line_keeps_tag_within_line_cap(self) -> None:
+        mid = "3f2a9c1e-7b4d-4e6a-9c1f-0a1b2c3d4e5f"
+        out = capture.format_auto_recall_hits(
+            {"auto_recall": {"records": [{"id": mid, "content": "y" * 1000}]}}
+        )
+        line = out.splitlines()[1]
+        self.assertTrue(line.startswith(f"- [m:{mid}] "))
+        self.assertLessEqual(len(line), capture.MAX_AUTO_RECALL_LINE_CHARS)
+        self.assertTrue(line.endswith("\u2026"))
+
+    def test_auto_recall_block_cap_with_ids_drops_lowest_ranked_hits(self) -> None:
+        ids = [f"{n:08x}-7b4d-4e6a-9c1f-0a1b2c3d4e5f" for n in range(1, 6)]
+        out = capture.format_auto_recall_hits(
+            {
+                "auto_recall": {
+                    "records": [
+                        {"id": mid, "subject": f"hit{n}", "content": "z" * 400}
+                        for n, mid in enumerate(ids)
+                    ]
+                }
+            }
+        )
+        self.assertLessEqual(len(out), capture.MAX_AUTO_RECALL_BLOCK_CHARS)
+        self.assertTrue(out.startswith("## Recalled\n"))
+        shown = [mid for mid in ids if f"[m:{mid}]" in out]
+        self.assertGreaterEqual(len(shown), 1)
+        self.assertLess(len(shown), len(ids))
+        self.assertEqual(shown, ids[: len(shown)])
+        footer = out.splitlines()[-1]
+        self.assertEqual(
+            footer, "Full text: memory_get(ids=[" + ", ".join(shown) + "])"
+        )
+        for line in out.splitlines()[1:-1]:
+            self.assertLessEqual(len(line), capture.MAX_AUTO_RECALL_LINE_CHARS)
+
+    def test_auto_recall_ids_keep_secret_stripping(self) -> None:
+        mid = "3f2a9c1e-7b4d-4e6a-9c1f-0a1b2c3d4e5f"
+        out = capture.format_auto_recall_hits(
+            {
+                "auto_recall": {
+                    "records": [
+                        {"id": mid, "content": "token tsk_abcdefghijklmnopqrstuvwxyz012345 leaked"}
+                    ]
+                }
+            }
+        )
+        self.assertNotIn("tsk_abcdefghijklmnopqrstuvwxyz012345", out)
+        self.assertIn(f"[m:{mid}]", out)
+
     def test_bound_repo_captures_into_org(self) -> None:
         tmp, root = _git_repo('{"v": 1, "slug": "sapien"}')
         with tmp:

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Auto-recall tags each hit with its memory id (#68):** `## Recalled`
+  lines from SessionStart `auto_recall` now read `- [m:<id>] subject:
+  content…` when the hit has an `id` / `memory_id`, and the block ends
+  with `Full text: memory_get(ids=[...])`. Full ids, not 8-char prefixes:
+  server `memory_get` parses exact UUIDs and files anything else under
+  `missing` (teamshared#1149). The 140-char line cap now includes the tag,
+  and the 800-char block cap drops the lowest-ranked hits before it drops
+  a tag or the footer. Hits without an id render as before. Rule and both
+  `teamshared-memory` skills say to `memory_get` a cut-off line instead of
+  recalling again.
+
 - **Rule "Staying current" (teamshared#913):** on `update_available: true`,
   tell the user to update this plugin. Never write a local
   `~/.cursor/rules/teamshared.mdc` / `.cursor/rules/` copy. Non-plugin
